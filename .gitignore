@@ -1,0 +1,33 @@
+# Node.js dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Editor directories and files
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+*.sublime-workspace
+.idea/
+
+# Build output
+/editor-app/frontend/dist/
+/editor-app/frontend/.vite/
+
+# Optional: Editor data directory if mapped locally (using named volume is preferred)
+# /editor-app/data/
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+local_data
