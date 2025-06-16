@@ -227,7 +227,6 @@ You'll typically run the frontend and backend servers separately.
         *   `schemas/`: JSON schema definitions for configuration files.
         *   `local_data/`: (Created during local dev) Contains local SQLite DB and example config files for development when `EDITOR_DATA_DIR` points here. **This directory should typically be in `.gitignore` for the `editor-app/backend` scope if not already.**
 *   `docs/`: Project documentation, PRD, etc.
-*   `llm_docs/`: LLM memory bank files (internal development context).
 *   `Dockerfile` (inside `editor-app/`): Defines the production Docker image.
 *   `docker-compose.yml`: Example for running the editor with Homepage.
 
@@ -235,7 +234,7 @@ You'll typically run the frontend and backend servers separately.
 
 Contributions are welcome! Whether it's bug reports, feature requests, documentation improvements, or code contributions, please feel free to:
 
-1.  **Open an Issue:** For bugs, feature ideas, or discussions, please open an issue on the [GitHub Issues page](https://github.com/your-github-username/homepage-editor/issues). (Replace with actual link)
+1.  **Open an Issue:** For bugs, feature ideas, or discussions, please open an issue on the [GitHub Issues page](hthttps://github.com/bitsbeyond/homepage-config-editor/issues). (Replace with actual link)
 2.  **Fork & Pull Request:** For code contributions:
     *   Fork the repository.
     *   Create a new branch for your feature or bug fix.
