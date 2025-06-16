@@ -1,0 +1,120 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Homepage Services Configuration Schema",
+  "description": "Schema for validating the structure of services.yaml",
+  "type": "array",
+  "items": {
+    "$ref": "#/definitions/serviceGroup"
+  },
+  "definitions": {
+    "serviceGroup": {
+      "description": "A group of services",
+      "type": "object",
+      "minProperties": 1,
+      "maxProperties": 1,
+      "patternProperties": {
+        "^.+$": {
+          "description": "The array of service items within the group",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/serviceItem"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "serviceItem": {
+      "description": "A single service entry",
+      "type": "object",
+      "minProperties": 1,
+      "maxProperties": 1,
+      "patternProperties": {
+        "^.+$": {
+          "$ref": "#/definitions/serviceDetails"
+        }
+      },
+      "additionalProperties": false
+    },
+    "serviceDetails": {
+      "description": "Details of a service",
+      "type": "object",
+      "properties": {
+        "href": {
+          "type": "string",
+          "format": "uri",
+          "description": "URL for the service link"
+        },
+        "description": {
+          "type": "string",
+          "description": "Description of the service"
+        },
+        "icon": {
+          "type": "string",
+          "description": "Icon identifier (e.g., 'fas fa-server', 'si-plex', 'plex.png')"
+        },
+        "widget": {
+          "$ref": "#/definitions/serviceWidget",
+          "description": "Optional widget configuration for the service"
+        },
+        "target": {
+            "type": "string",
+            "enum": ["_self", "_blank", "_top"],
+            "description": "Target attribute for the link"
+        },
+        "ping": {
+            "type": "string",
+            "description": "URL to ping for status indicator"
+        },
+        "method": {
+            "type": "string",
+            "description": "HTTP method for ping request"
+        },
+        "status": {
+            "type": ["string", "array"],
+            "description": "Expected status code(s) for ping",
+            "items": { "type": "string" }
+        },
+        "headers": {
+            "type": "array",
+            "description": "Headers for ping request",
+            "items": { "type": "string" }
+        },
+        "body": {
+            "type": "string",
+            "description": "Body for ping request"
+        },
+        "timeout": {
+            "type": "integer",
+            "description": "Timeout for ping request in ms"
+        },
+        "container": {
+            "type": "string",
+            "description": "Docker container name for status indicator"
+        },
+        "server": {
+            "type": "string",
+            "description": "Server identifier for Docker/Kubernetes integration"
+        },
+        "supportWidget": {
+            "type": "boolean",
+            "description": "Explicitly enable/disable widget support (rarely needed)"
+        }
+      },
+      "additionalProperties": true
+    },
+    "serviceWidget": {
+      "description": "Configuration for a service widget",
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "description": "The type of the widget (e.g., 'plex', 'sonarr')"
+        }
+      },
+      "required": [
+        "type"
+      ],
+      "additionalProperties": true
+    }
+  }
+}

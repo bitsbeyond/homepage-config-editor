@@ -7,6 +7,10 @@ The Homepage Config Editor is a user-friendly, web-based graphical interface des
 
 This editor runs as a separate Docker container alongside your Homepage instance, interacting with the configuration files through a shared volume.
 
+## Vibe code project
+
+This project was autonomously built in VSCode by 'Roo', leveraging Google Gemini Pro 2.5. Testing and validation was fully done by humans.
+
 ## Features
 
 *   **Intuitive Configuration Management:**
@@ -72,9 +76,9 @@ services:
 
   homepage-editor:
     # Replace with the actual published image name once available:
-    # image: ghcr.io/your-github-username/homepage-editor:latest
+    # image: ghcr.io/aicodebitsbeyond/homepage-editor:latest
     # For local builds (if you cloned the repository):
-    image: homepage-editor
+    image: ghcr.io/aicodebitsbeyond/homepage-editor:latest
     container_name: homepage-editor
     ports:
       - "3001:3000" # Host port 3001 mapped to container port 3000

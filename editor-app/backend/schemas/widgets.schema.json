@@ -1,0 +1,31 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Homepage Info Widgets Configuration Schema",
+  "description": "Schema for validating the structure of widgets.yaml (Info Widgets)",
+  "type": "array",
+  "items": {
+    "description": "A single info widget entry. The object should have exactly one key, which is the widget type.",
+    "type": "object",
+    "minProperties": 1,
+    "maxProperties": 1,
+    "patternProperties": {
+      "^[a-zA-Z0-9_]+$": {
+        "$ref": "#/definitions/widgetConfig"
+      }
+    },
+    "additionalProperties": false
+  },
+  "definitions": {
+    "widgetConfig": {
+      "description": "Configuration properties for any info widget",
+      "type": "object",
+      "properties": {
+        "label": {
+          "type": "string",
+          "description": "Optional display label for the widget"
+        }
+      },
+      "additionalProperties": true
+    }
+  }
+}

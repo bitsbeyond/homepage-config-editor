@@ -30,4 +30,19 @@ lerna-debug.log*
 .Trashes
 ehthumbs.db
 Thumbs.db
-local_data
+docker_build.log
+
+# Test coverage and temporary files
+.tap/
+.nyc_output/
+coverage/
+test_data/
+*.lcov
+*.tap
+
+# Environment files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local

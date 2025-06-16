@@ -1,0 +1,26 @@
+<svg width="100" height="100" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="100" height="100" rx="20" fill="white"/>
+
+  <defs>
+    <linearGradient id="bookmarkGradient" x1="50" y1="15" x2="50" y2="85" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#60A5FA"/> <stop offset="100%" stop-color="#2563EB"/> </linearGradient>
+  </defs>
+  <path d="M20 15 H 80 V 85 L 50 65 L 20 85 V 15 Z" fill="url(#bookmarkGradient)"/>
+
+  <path d="M35 55 V 75 H 65 V 55 L 50 45 L 35 55 Z" fill="white"/>
+
+  <rect x="58" y="25" width="10" height="30" rx="2" fill="#FDBA74" transform="rotate(15 63 40)"/>
+  <path d="M61.5 52 L 64.5 55 L 58.5 55 L 55.5 52 L 61.5 52 Z" fill="#FDE68A" transform="rotate(15 60 53.5)"/>
+  <polygon points="58.5,55 60,56.5 57,56.5" fill="#4B5563" transform="rotate(15 58.5 55.75)"/>
+  <rect x="57" y="20" width="12" height="7" rx="2" fill="#FCA5A5" transform="rotate(15 63 23.5)"/>
+
+  <filter id="shadow">
+    <feDropShadow dx="1" dy="2" stdDeviation="1.5" flood-color="#000000" flood-opacity="0.2"/>
+  </filter>
+  <g filter="url(#shadow)">
+    <path d="M20 15 H 80 V 85 L 50 65 L 20 85 V 15 Z" fill="transparent"/>
+     <g transform="rotate(15 63 40)">
+      <rect x="58" y="25" width="10" height="30" rx="2" fill="transparent"/>
+    </g>
+  </g>
+</svg>

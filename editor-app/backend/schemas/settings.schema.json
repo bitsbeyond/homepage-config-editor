@@ -1,0 +1,228 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Homepage Settings Configuration Schema",
+  "description": "Schema for validating the structure of settings.yaml. Based on https://gethomepage.dev/latest/configs/settings/",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string",
+      "description": "Page title"
+    },
+    "description": {
+      "type": "string",
+      "description": "Page description meta tag"
+    },
+    "startUrl": {
+      "type": "string",
+      "description": "Start URL for installable apps"
+    },
+    "background": {
+      "oneOf": [
+        { "type": "string", "description": "URL or path to background image" },
+        {
+          "type": "object",
+          "properties": {
+            "image": { "type": "string", "description": "URL or path to background image" },
+            "blur": { "type": "string", "description": "Tailwind backdrop-blur class (e.g., sm, md, lg, xl)" },
+            "saturate": { "type": "number", "description": "Tailwind backdrop-saturate value (e.g., 0, 50, 100, 150, 200)" },
+            "brightness": { "type": "number", "description": "Tailwind backdrop-brightness value (e.g., 0, 50, 75, 100, 125, 150, 200)" },
+            "opacity": { "type": "number", "minimum": 0, "maximum": 100, "description": "Opacity percentage (0-100)" }
+          },
+          "required": ["image"],
+          "additionalProperties": false
+        }
+      ],
+      "description": "Page background image configuration"
+    },
+    "cardBlur": {
+        "type": "string",
+        "description": "Tailwind backdrop-blur class for service/bookmark cards (e.g., xs, sm, md)"
+    },
+    "favicon": {
+      "type": "string",
+      "description": "URL or path to favicon"
+    },
+    "theme": {
+      "type": "string",
+      "enum": ["light", "dark"],
+      "description": "Force a specific theme"
+    },
+    "color": {
+      "type": "string",
+      "enum": ["slate", "gray", "zinc", "neutral", "stone", "amber", "yellow", "lime", "green", "emerald", "teal", "cyan", "sky", "blue", "indigo", "violet", "purple", "fuchsia", "pink", "rose", "red", "white"],
+      "description": "Force a specific color palette"
+    },
+    "layout": {
+      "description": "Configuration for group layouts and ordering",
+      "oneOf": [
+        {
+          "type": "object",
+          "patternProperties": {
+            "^.+$": { "$ref": "#/definitions/groupLayoutSettings" }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": { "type": "string", "description": "Name of the group" },
+              "header": { "type": "boolean", "description": "Show the group header" },
+              "style": { "type": "string", "enum": ["row", "column"], "description": "Layout style for items" },
+              "columns": { "type": "integer", "minimum": 1, "description": "Number of columns for items" },
+              "icon": { "type": "string", "description": "Icon for the group (or tab)" },
+              "tab": { "type": "string", "description": "Assign group to a specific tab name" },
+              "iconsOnly": { "type": "boolean", "description": "Display only icons for items" },
+              "initiallyCollapsed": { "type": "boolean", "description": "Collapse the group by default" },
+              "useEqualHeights": { "type": "boolean", "description": "Make items in this group the same height" }
+            },
+            "required": ["name"],
+            "additionalProperties": true
+          }
+        }
+      ]
+    },
+    "bookmarksStyle": {
+        "type": "string",
+        "enum": ["icons"],
+        "description": "Global style for bookmark groups (currently only 'icons')"
+    },
+    "iconStyle": {
+        "type": "string",
+        "enum": ["theme", "gradient"],
+        "description": "Style for prefixed icons (mdi-, etc.)"
+    },
+    "fullWidth": {
+        "type": "boolean",
+        "description": "Make homepage take up the entire window width"
+    },
+    "maxGroupColumns": {
+        "type": "integer",
+        "minimum": 5,
+        "maximum": 8,
+        "description": "Maximum number of columns for service groups (default 4)"
+    },
+    "maxBookmarkGroupColumns": {
+        "type": "integer",
+        "minimum": 1,
+        "maximum": 8,
+        "description": "Maximum number of columns for bookmark groups (default 6)"
+    },
+    "disableCollapse": {
+        "type": "boolean",
+        "description": "Disable the collapsible feature for groups"
+    },
+    "groupsInitiallyCollapsed": {
+        "type": "boolean",
+        "description": "Collapse all groups by default"
+    },
+    "useEqualHeights": {
+        "type": "boolean",
+        "description": "Global setting to make cards in a row the same height"
+    },
+    "headerStyle": {
+      "type": "string",
+      "enum": ["underlined", "boxed", "clean", "boxedWidgets"],
+      "description": "Style for group headers"
+    },
+    "base": {
+      "type": "string",
+      "format": "uri",
+      "description": "Set the document's base URL (must be absolute)"
+    },
+    "language": {
+      "type": "string",
+      "description": "UI language code (e.g., 'en', 'de', 'en-GB')"
+    },
+    "target": {
+      "type": "string",
+      "enum": ["_blank", "_self", "_top"],
+      "description": "Default link target"
+    },
+    "providers": {
+      "type": "object",
+      "description": "Shared API provider options and secrets",
+      "patternProperties": {
+        "^.+$": {
+          "oneOf": [
+            { "type": "string", "description": "API key or simple value" },
+            {
+              "type": "object",
+              "properties": {
+                "url": { "type": "string", "format": "uri" },
+                "username": { "type": "string" },
+                "password": { "type": "string" }
+              },
+              "additionalProperties": true
+            }
+          ]
+        }
+      }
+    },
+    "quicklaunch": {
+      "type": "object",
+      "properties": {
+        "searchDescriptions": { "type": "boolean", "description": "Include item descriptions in search" },
+        "hideInternetSearch": { "type": "boolean", "description": "Disable web search option" },
+        "showSearchSuggestions": { "type": "boolean", "description": "Show search suggestions for web search" },
+        "hideVisitURL": { "type": "boolean", "description": "Disable 'Visit URL' option" },
+        "provider": {
+            "type": "string",
+            "enum": ["google", "duckduckgo", "bing", "baidu", "brave", "custom"],
+            "description": "Search engine provider"
+        },
+        "url": { "type": "string", "format": "uri", "description": "Custom search URL template (use {query})" },
+        "target": { "type": "string", "enum": ["_blank", "_self", "_top"], "description": "Target for custom search" },
+        "suggestionUrl": { "type": "string", "format": "uri", "description": "Custom suggestion URL template (use {query})" }
+      },
+      "additionalProperties": false
+    },
+    "hideVersion": {
+      "type": "boolean",
+      "description": "Hide the Homepage version in the footer"
+    },
+    "disableUpdateCheck": {
+      "type": "boolean",
+      "description": "Disable checking for new versions on GitHub"
+    },
+    "logpath": {
+        "type": "string",
+        "description": "Custom path for the log directory"
+    },
+    "showStats": {
+      "type": "boolean",
+      "description": "Show Docker stats expanded by default"
+    },
+    "statusStyle": {
+      "type": "string",
+      "enum": ["dot", "basic"],
+      "description": "Style for status indicators (dot, basic, or default)"
+    },
+    "instanceName": {
+        "type": "string",
+        "description": "Name used by Docker discovery to differentiate instances"
+    },
+    "hideErrors": {
+        "type": "boolean",
+        "description": "Hide widget API error messages globally"
+    }
+  },
+  "additionalProperties": true,
+  "definitions": {
+    "groupLayoutSettings": {
+      "description": "Layout settings for a specific group, potentially containing nested groups",
+      "type": "object",
+      "properties": {
+        "header": { "type": "boolean", "description": "Show the group header" },
+        "style": { "type": "string", "enum": ["row", "column"], "description": "Layout style for items" },
+        "columns": { "type": "integer", "minimum": 1, "description": "Number of columns for items" },
+        "icon": { "type": "string", "description": "Icon for the group (or tab)" },
+        "tab": { "type": "string", "description": "Assign group to a specific tab name" },
+        "iconsOnly": { "type": "boolean", "description": "Display only icons for items" },
+        "initiallyCollapsed": { "type": "boolean", "description": "Collapse the group by default" },
+        "useEqualHeights": { "type": "boolean", "description": "Make items in this group the same height" }
+      }
+    }
+  }
+}
