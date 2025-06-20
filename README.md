@@ -9,7 +9,7 @@ This editor runs as a separate Docker container alongside your Homepage instance
 
 ## Vibe code project
 
-This project was autonomously built in VSCode by 'Roo', leveraging Google Gemini Pro 2.5. Testing and validation was fully done by humans.
+This project was autonomously built in VSCode with 'Roo code', leveraging Google Gemini Pro 2.5. Testing and validation was fully done by humans.
 
 ## Features
 
@@ -39,7 +39,53 @@ This project was autonomously built in VSCode by 'Roo', leveraging Google Gemini
     *   Easy to deploy as a Docker container alongside your existing Homepage setup.
 
 ---
-*(Further sections like Screenshots, Getting Started, Installation, Usage, etc., will follow)*
+## Screenshots
+
+Here are some screenshots showcasing the features of the Homepage Config Editor:
+
+**Light Mode Interface:**
+![Light Mode Interface](https://github.com/bitsbeyond/homepage-config-editor/blob/main/img/lightmode.png?raw=true)
+
+**Dark Mode Interface:**
+![Dark Mode Interface](https://github.com/bitsbeyond/homepage-config-editor/blob/main/img/darkmode.png?raw=true)
+
+**Services Management:**
+![Services Management](https://github.com/bitsbeyond/homepage-config-editor/blob/main/img/services.png?raw=true)
+
+**Editing a Service:**
+![Editing a Service](https://github.com/bitsbeyond/homepage-config-editor/blob/main/img/services_edit.png?raw=true)
+
+**Service Widget List:**
+![Service Widget List](https://github.com/bitsbeyond/homepage-config-editor/blob/main/img/services_widgetlist.png?raw=true)
+
+**Bookmarks Management:**
+![Bookmarks Management](https://github.com/bitsbeyond/homepage-config-editor/blob/main/img/bookmarks.png?raw=true)
+
+**Info Widgets Management:**
+![Info Widgets Management](https://github.com/bitsbeyond/homepage-config-editor/blob/main/img/info_widgets.png?raw=true)
+
+**Group Reordering:**
+![Group Reordering](https://github.com/bitsbeyond/homepage-config-editor/blob/main/img/groupreorder.png?raw=true)
+
+**General Settings:**
+![General Settings](https://github.com/bitsbeyond/homepage-config-editor/blob/main/img/settings_general.png?raw=true)
+
+**Group Layout Settings:**
+![Group Layout Settings](https://github.com/bitsbeyond/homepage-config-editor/blob/main/img/settings_grouplayout.png?raw=true)
+
+**Raw File Editor:**
+![Raw File Editor](https://github.com/bitsbeyond/homepage-config-editor/blob/main/img/raweditor.png?raw=true)
+
+**Environment Variables View:**
+![Environment Variables View](https://github.com/bitsbeyond/homepage-config-editor/blob/main/img/env_variables.png?raw=true)
+
+**Custom Images Management:**
+![Custom Images Management](https://github.com/bitsbeyond/homepage-config-editor/blob/main/img/customimages.png?raw=true)
+
+**User Profile:**
+![User Profile](https://github.com/bitsbeyond/homepage-config-editor/blob/main/img/userprofile.png?raw=true)
+
+---
 
 ## Getting Started
 
@@ -249,6 +295,3 @@ Please try to keep PRs focused on a single issue or feature.
 
 This project is licensed under the terms of the **[GNU General Public License v3.0]**. Please see the [`LICENSE`](LICENSE:1) file in the root of the repository for full details.
 *(Note: The `list_files` output showed a `LICENSE` file. Its type should be specified here, e.g., MIT License, Apache 2.0 License.)*
-
----
-*(Optional: Add Acknowledgements section here)*
