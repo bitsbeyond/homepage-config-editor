@@ -10,25 +10,25 @@ import { apiRequest } from '../../utils/api';
 // TODO: Keep this list updated as new widget components are added
 const serviceWidgetTypes = [
     'adguard-home', 'apcups', 'argocd', 'atsumeru', 'audiobookshelf', 'authentik', 'autobrr',
-    'azuredevops', 'bazarr', 'beszel', 'caddy', 'calendar', 'calibre-web', 'changedetectionio',
-    'channelsdvrserver', 'cloudflared', 'coin-market-cap', 'crowdsec', 'customapi', 'deluge',
-    'develancacheui', 'diskstation', 'downloadstation', 'emby', 'esphome', 'evcc', 'fileflows',
+    'azuredevops', 'backrest', 'bazarr', 'beszel', 'caddy', 'calibre-web', 'changedetectionio',
+    'channelsdvrserver', 'checkmk', 'cloudflared', 'coin-market-cap', 'crowdsec', 'customapi', 'deluge',
+    'develancacheui', 'diskstation', 'downloadstation', 'emby', 'esphome', 'evcc', 'filebrowser', 'fileflows',
     'firefly', 'flood', 'freshrss', 'frigate', 'fritzbox', 'gamedig', 'gatus', 'ghostfolio',
     'gitea', 'gitlab', 'glances', 'gluetun', 'gotify', 'grafana', 'hdhomerun', 'headscale',
     'healthchecks', 'homeassistant', 'homebox', 'homebridge', 'iframe', 'immich', 'jackett',
-    'jdownloader', 'jellyfin', 'jellyseerr', 'karakeep', 'kavita', 'komga', 'kopia', 'lidarr',
+    'jdownloader', 'jellyfin', 'jellyseerr', 'jellystat', 'karakeep', 'kavita', 'komga', 'komodo', 'kopia', 'lidarr',
     'linkwarden', 'lubelogger', 'mailcow', 'mastodon', 'mealie', 'medusa', 'mikrotik', 'minecraft',
     'miniflux', 'mjpeg', 'moonraker', 'mylar', 'myspeed', 'navidrome', 'netalertx', 'netdata',
     'nextcloud', 'nextdns', 'npm', 'nzbget', 'octoprint', 'omada', 'ombi',
-    'opendtu', 'openmediavault', 'openwrt', 'opnsense', 'overseerr', 'paperlessngx', 'peanut',
-    'pfsense', 'photoprism', 'pihole', 'plantit', 'plex-tautulli', 'plex', 'portainer', 'tautulli',
-    'prometheus', 'prometheusmetric', 'prowlarr', 'proxmox', 'proxmoxbackupserver', 'pterodactyl',
+    'opendtu', 'openmediavault', 'openwrt', 'opnsense', 'overseerr', 'pangolin', 'paperlessngx', 'peanut',
+    'pfsense', 'photoprism', 'pihole', 'plantit', 'plex', 'portainer', 'tautulli',
+    'prometheus', 'prometheusmetric', 'prowlarr', 'proxmox', 'proxmoxbackupserver', 'proxmoxvm', 'pterodactyl',
     'pyload', 'qbittorrent', 'qnap', 'radarr', 'readarr', 'romm', 'rutorrent', 'sabnzbd',
     'scrutiny', 'slskd', 'sonarr', 'speedtest-tracker', 'spoolman', 'stash', 'stocks', 'suwayomi',
     'swagdashboard', 'syncthing-relay-server', 'tailscale', 'tandoor', 'tdarr', 'technitium',
-    'traefik', 'transmission', 'truenas', 'tubearchivist', 'unifi', 'unmanic', // Changed 'unifi-controller' to 'unifi' and removed the explicit 'unifi' at the end
-    'uptime-kuma', 'uptimerobot', 'urbackup', 'vikunja', 'watchtower', 'wgeasy', 'whatsupdocker',
-    'xteve', 'zabbix'
+    'traefik', 'transmission', 'trilium', 'truenas', 'tubearchivist', 'unifi', 'unmanic', 'unraid',
+    'uptime-kuma', 'uptimerobot', 'urbackup', 'vikunja', 'wallos', 'watchtower', 'wgeasy', 'whatsupdocker',
+    'xteve', 'yourspotify', 'zabbix'
 ].filter((v, i, a) => a.indexOf(v) === i); // Ensure unique values
 
 // Helper to convert widget type string to component name (copied from AddServiceForm)
@@ -64,11 +64,12 @@ const widgetComponentLoaders = {
     'portainer': lazy(() => import('../ServiceWidgets/PortainerWidgetFields.jsx')),
     'homeassistant': lazy(() => import('../ServiceWidgets/HomeassistantWidgetFields.jsx')),
     'proxmox': lazy(() => import('../ServiceWidgets/ProxmoxWidgetFields.jsx')),
+    'proxmoxvm': lazy(() => import('../ServiceWidgets/ProxmoxvmWidgetFields.jsx')),
     'tautulli': lazy(() => import('../ServiceWidgets/TautulliWidgetFields.jsx')),
     'watchtower': lazy(() => import('../ServiceWidgets/WatchtowerWidgetFields.jsx')),
     'emby': lazy(() => import('../ServiceWidgets/EmbyWidgetFields.jsx')),
     'tdarr': lazy(() => import('../ServiceWidgets/TdarrWidgetFields.jsx')),
-    'unifi': lazy(() => import('../ServiceWidgets/UnifiWidgetFields.jsx')), // Ensure this uses 'unifi'
+    'unifi': lazy(() => import('../ServiceWidgets/UnifiWidgetFields.jsx')),
     'netdata': lazy(() => import('../ServiceWidgets/NetdataWidgetFields.jsx')),
     'prometheus': lazy(() => import('../ServiceWidgets/PrometheusWidgetFields.jsx')),
     'prometheusmetric': lazy(() => import('../ServiceWidgets/PrometheusmetricWidgetFields.jsx')),
@@ -177,7 +178,17 @@ const widgetComponentLoaders = {
     'whatsupdocker': lazy(() => import('../ServiceWidgets/WhatsupdockerWidgetFields.jsx')), // Added whatsupdocker
     'xteve': lazy(() => import('../ServiceWidgets/XteveWidgetFields.jsx')), // Added xteve
     'zabbix': lazy(() => import('../ServiceWidgets/ZabbixWidgetFields.jsx')), // Added zabbix
-    // Add other widget types here as they are implemented
+    // New widgets added for Homepage v1.7.0
+    'backrest': lazy(() => import('../ServiceWidgets/BackrestWidgetFields.jsx')),
+    'checkmk': lazy(() => import('../ServiceWidgets/CheckmkWidgetFields.jsx')),
+    'filebrowser': lazy(() => import('../ServiceWidgets/FilebrowserWidgetFields.jsx')),
+    'jellystat': lazy(() => import('../ServiceWidgets/JellystatWidgetFields.jsx')),
+    'komodo': lazy(() => import('../ServiceWidgets/KomodoWidgetFields.jsx')),
+    'pangolin': lazy(() => import('../ServiceWidgets/PangolinWidgetFields.jsx')),
+    'trilium': lazy(() => import('../ServiceWidgets/TriliumWidgetFields.jsx')),
+    'unraid': lazy(() => import('../ServiceWidgets/UnraidWidgetFields.jsx')),
+    'wallos': lazy(() => import('../ServiceWidgets/WallosWidgetFields.jsx')),
+    'yourspotify': lazy(() => import('../ServiceWidgets/YourspotifyWidgetFields.jsx')),
 };
 
 
@@ -195,6 +206,7 @@ function EditServiceForm({ open, onClose, onServiceUpdated, serviceToEdit, curre
     const [icon, setIcon] = useState('');
     const [widgetType, setWidgetType] = useState(''); // State for selected widget type
     const [widgetData, setWidgetData] = useState(null); // State for widget-specific data
+    const [initialWidgetData, setInitialWidgetData] = useState(null); // Initial data for widget (prevents infinite loop)
     const [widgetFieldErrors, setWidgetFieldErrors] = useState({}); // State for widget-specific field errors
 
     // State for component logic
@@ -244,6 +256,7 @@ function EditServiceForm({ open, onClose, onServiceUpdated, serviceToEdit, curre
 
             setWidgetType(formWidgetType);
             setWidgetData(currentWidget || null);
+            setInitialWidgetData(currentWidget || null); // Set initial data separately
 
             setIsNewGroup(false); // Reset group creation toggle
             setNewGroupName('');
@@ -260,6 +273,7 @@ function EditServiceForm({ open, onClose, onServiceUpdated, serviceToEdit, curre
             setIcon('');
             setWidgetType('');
             setWidgetData(null);
+            setInitialWidgetData(null);
             setIsNewGroup(false);
             setNewGroupName('');
             setError('');
@@ -519,7 +533,9 @@ function EditServiceForm({ open, onClose, onServiceUpdated, serviceToEdit, curre
                                 const newType = e.target.value;
                                 setWidgetType(newType);
                                 // Reset widget data when type changes, but keep the type
-                                setWidgetData(newType ? { type: newType } : null);
+                                const newData = newType ? { type: newType } : null;
+                                setWidgetData(newData);
+                                setInitialWidgetData(newData);
                             }}
                         >
                             <MenuItem value=""><em>None</em></MenuItem>
@@ -536,7 +552,7 @@ function EditServiceForm({ open, onClose, onServiceUpdated, serviceToEdit, curre
                         <Suspense fallback={<Box sx={{ display: 'flex', justifyContent: 'center', my: 2 }}><CircularProgress /></Box>}>
                             <WidgetFieldsComponent
                                 key={widgetType || 'no-widget'} // Add key based on type, handle empty type
-                                initialData={widgetData || { type: widgetType }} // Pass prop as "initialData"
+                                initialData={initialWidgetData || { type: widgetType }} // Pass initial data, not live widgetData
                                 onChange={handleWidgetDataChange}
                             />
                         </Suspense>

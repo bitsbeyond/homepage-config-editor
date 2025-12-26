@@ -15,6 +15,7 @@ import {
   CardActions
 } from '@mui/material';
 import { CloudUpload as CloudUploadIcon, Delete as DeleteIcon } from '@mui/icons-material';
+import { getAccessToken, apiRequest } from '../../utils/api';
 
 function ImageManagementPage() {
   const [images, setImages] = useState([]);
@@ -27,7 +28,7 @@ function ImageManagementPage() {
     setIsLoading(true);
     setMessage({ text: '', type: '' });
     try {
-      const token = localStorage.getItem('authToken');
+      const token = getAccessToken();
       const response = await axios.get('/api/images', {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -61,7 +62,7 @@ function ImageManagementPage() {
     formData.append('imageFile', selectedFile);
 
     try {
-      const token = localStorage.getItem('authToken');
+      const token = getAccessToken();
       const response = await axios.post('/api/images/upload', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
@@ -89,7 +90,7 @@ function ImageManagementPage() {
     setIsLoading(true);
     setMessage({ text: '', type: '' });
     try {
-      const token = localStorage.getItem('authToken');
+      const token = getAccessToken();
       await axios.delete(`/api/images/${encodeURIComponent(filename)}`, {
         headers: { Authorization: `Bearer ${token}` },
       });

@@ -35,6 +35,12 @@ export default defineConfig({
     //   languageWorkers: ['editorWorkerService', 'yaml', 'css', 'json', 'javascript', 'typescript'],
     // }),
   ],
+  resolve: {
+    dedupe: ['react', 'react-dom', '@mui/material', '@emotion/react', '@emotion/styled']
+  },
+  optimizeDeps: {
+    include: ['react', 'react-dom', '@mui/material', '@emotion/react', '@emotion/styled']
+  },
   server: {
     proxy: {
       // Proxy API requests to the backend server

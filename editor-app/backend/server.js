@@ -19,6 +19,7 @@ const fastifyJwt = require('@fastify/jwt');
 const yaml = require('js-yaml'); // Import js-yaml library
 const dotenv = require('dotenv'); // Import dotenv
 const multer = require('fastify-multer'); // Use multer from fastify-multer
+const fastifyHelmet = require('@fastify/helmet'); // Corrected import
 // Removed Git-related imports
 const {
     readConfigFile,
@@ -163,6 +164,29 @@ fastify.register(fastifyJwt, {
 fastify.register(require('@fastify/cookie'), {
   secret: REFRESH_SECRET, // Use refresh secret for cookie signing
   parseOptions: {}
+});
+
+// Register fastify-helmet for security headers
+fastify.register(fastifyHelmet, {
+  // Default CSP is quite restrictive, might need adjustment for inline scripts/styles or specific sources
+  // For now, let's use a basic policy and adjust if frontend breaks.
+  // A more robust approach would be to configure this based on frontend needs.
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'"], // Allow inline scripts for now, review later
+      styleSrc: ["'self'", "'unsafe-inline'"],  // Allow inline styles for now, review later
+      imgSrc: ["'self'", "data:", "https:", "http://localhost:*"], // Allow all HTTPS images for CDN icons (homarr-labs, Google, etc.)
+      connectSrc: ["'self'", "https://cdn.jsdelivr.net", "http://localhost:*", "ws://localhost:*"], // Allow CDN metadata fetch
+      fontSrc: ["'self'"],
+      objectSrc: ["'none'"],
+      frameAncestors: ["'none'"], // Prevents clickjacking
+    },
+  },
+  // Other default helmet options are generally good.
+  // We can override specific ones if needed, e.g.:
+  // hsts: { maxAge: 31536000, includeSubDomains: true, preload: true },
+  // referrerPolicy: { policy: 'strict-origin-when-cross-origin' }
 });
 
 // In-memory refresh token store (for production, consider Redis or database)
@@ -2037,8 +2061,8 @@ fastify.get('/api/env', { preHandler: [verifyAuth] }, async (request, reply) => 
         envFilePath = path.resolve(process.env.DOTENV_PATH);
         fastify.log.info(`Using explicit DOTENV_PATH for GET /api/env: ${envFilePath}`);
     } else if (process.env.EDITOR_DATA_DIR) {
-        // Local development: Assume .env is in the project root
-        envFilePath = path.resolve(__dirname, '../../.env');
+        // Local development: .env is in the data directory
+        envFilePath = path.join(process.env.EDITOR_DATA_DIR, '.env');
          fastify.log.info(`Using local development .env path for GET /api/env: ${envFilePath}`);
     } else {
         // Docker context (default)

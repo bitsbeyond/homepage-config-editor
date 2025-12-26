@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Autocomplete, TextField, CircularProgress, Box, InputAdornment, IconButton } from '@mui/material';
 import Visibility from '@mui/icons-material/Visibility';
 import VisibilityOff from '@mui/icons-material/VisibilityOff';
@@ -18,7 +18,7 @@ function debounce(func, wait) {
     };
 }
 
-function EnvVarAutocompleteInput({ label, name, value: propValue, onChange, ...props }) { // Rename value prop to avoid conflict, ADD NAME PROP
+function EnvVarAutocompleteInput({ label, name, value: propValue, onChange, type, ...otherProps }) { // Extract type separately
     const [selectedValue, setSelectedValue] = useState(propValue || null); // State for the selected value (can be null)
     const [inputValue, setInputValue] = useState(propValue || ''); // State for the text input
     const [options, setOptions] = useState([]);
@@ -27,18 +27,25 @@ function EnvVarAutocompleteInput({ label, name, value: propValue, onChange, ...p
     const [showValue, setShowValue] = useState(false); // State for visibility toggle
     const { enqueueSnackbar } = useSnackbar();
 
-    // Toggle visibility state
-    const handleClickShowValue = () => {
+    // Determine if this is a password field (stable reference)
+    const isPasswordField = type === 'password';
+
+    // Track if we've already fetched options (prevents re-fetch loops)
+    const hasFetchedRef = useRef(false);
+
+    // Toggle visibility state (memoized to prevent flickering)
+    const handleClickShowValue = useCallback(() => {
         setShowValue((show) => !show);
-    };
+    }, []);
 
-    const handleMouseDownPassword = (event) => {
+    const handleMouseDownPassword = useCallback((event) => {
         event.preventDefault(); // Prevent blur on icon click
-    };
+    }, []);
 
-    // Fetch options function (no longer debounced, called directly when needed)
+    // Fetch options function (stable reference prevents re-render loops)
     const fetchOptions = useCallback(async () => {
-        if (options.length > 0 || loading) return; // Don't fetch if already loaded or loading
+        if (hasFetchedRef.current) return; // Only fetch once
+        hasFetchedRef.current = true;
         setLoading(true);
         try {
             const data = await fetchEnvKeysApi();
@@ -50,8 +57,7 @@ function EnvVarAutocompleteInput({ label, name, value: propValue, onChange, ...p
         } finally {
             setLoading(false);
         }
-    // Removed debounce wrapper, adjust dependencies
-    }, [enqueueSnackbar, options.length, loading]);
+    }, [enqueueSnackbar]); // Only depend on enqueueSnackbar (stable)
 
     // Effect to sync internal state with prop value
     useEffect(() => {
@@ -67,10 +73,6 @@ function EnvVarAutocompleteInput({ label, name, value: propValue, onChange, ...p
     const handleInputChange = (event, newInputValue) => {
         setInputValue(newInputValue); // Update the input text state immediately
         // Let MUI Autocomplete handle filtering based on options
-        // Fetch options if dropdown is opened and they aren't loaded
-        if (open && options.length === 0 && !loading) {
-            fetchOptions();
-        }
     };
 
     const handleChange = (event, newValue) => { // newValue is the selected option or typed string
@@ -128,6 +130,73 @@ function EnvVarAutocompleteInput({ label, name, value: propValue, onChange, ...p
          }
     };
 
+    // Memoize callbacks to prevent flickering in React 19
+    const handleOpen = useCallback(() => {
+        setOpen(true);
+        fetchOptions(); // Will only fetch once due to hasFetchedRef
+    }, [fetchOptions]);
+
+    const handleClose = useCallback(() => {
+        setOpen(false);
+    }, []);
+
+    // Memoize getOptionLabel to prevent re-renders
+    const getOptionLabel = useCallback((option) => option, []);
+
+    // Memoize the entire endAdornment to prevent flickering
+    const endAdornment = useMemo(() => {
+        return (
+            <>
+                {isPasswordField && (
+                    <InputAdornment position="end">
+                        <IconButton
+                            aria-label="toggle password visibility"
+                            onClick={handleClickShowValue}
+                            onMouseDown={handleMouseDownPassword}
+                            edge="end"
+                            size="small"
+                        >
+                            {showValue ? <VisibilityOff /> : <Visibility />}
+                        </IconButton>
+                    </InputAdornment>
+                )}
+                {loading && <CircularProgress color="inherit" size={20} />}
+            </>
+        );
+    }, [isPasswordField, showValue, loading, handleClickShowValue, handleMouseDownPassword]);
+
+    // Don't memoize renderInput - MUI Autocomplete handles it
+    const renderInput = (params) => {
+        return (
+            <TextField
+                {...params}
+                label={label}
+                variant="outlined"
+                fullWidth
+                inputProps={{
+                    ...params.inputProps,
+                    type: (isPasswordField && !showValue) ? 'password' : 'text',
+                }}
+                InputProps={{
+                    ...params.InputProps,
+                    endAdornment: (
+                        <>
+                            {endAdornment}
+                            {params.InputProps.endAdornment}
+                        </>
+                    ),
+                }}
+                {...otherProps}
+            />
+        );
+    };
+
+    // Memoize renderOption to prevent re-renders
+    const renderOption = useCallback((props, option) => (
+        <Box component="li" {...props} key={option}>
+            {option}
+        </Box>
+    ), []);
 
     // Restore original Autocomplete code:
     return (
@@ -140,60 +209,12 @@ function EnvVarAutocompleteInput({ label, name, value: propValue, onChange, ...p
             onChange={handleChange} // Handles selection or freeSolo confirmation
             onBlur={handleBlur} // Handle formatting and closing
             open={open}
-            onOpen={() => {
-                setOpen(true);
-                // Fetch options if dropdown is opened and they aren't loaded
-                if (options.length === 0 && !loading) {
-                    fetchOptions();
-                }
-            }}
-            onClose={() => {
-                setOpen(false);
-            }}
+            onOpen={handleOpen}
+            onClose={handleClose}
             loading={loading}
-            getOptionLabel={(option) => option} // Display options as strings
-            renderInput={(params) => (
-                <TextField
-                    {...params} // Spread params first
-                    label={label}
-                    variant="outlined"
-                    fullWidth
-                    // Remove direct type prop here
-                    // Instead, pass it via inputProps below
-                    inputProps={{ // Pass props directly to the underlying HTML input
-                        ...params.inputProps, // Spread original inputProps if any
-                        type: (props.type === 'password' && !showValue) ? 'password' : 'text',
-                    }}
-                    InputProps={{ // Keep InputProps logic for adornments etc.
-                        ...params.InputProps,
-                        endAdornment: (
-                            <React.Fragment>
-                                {/* Conditionally add visibility toggle only if original type was password */}
-                                {props.type === 'password' && (
-                                    <InputAdornment position="end">
-                                        <IconButton
-                                            aria-label="toggle password visibility"
-                                            onClick={handleClickShowValue}
-                                            onMouseDown={handleMouseDownPassword}
-                                            edge="end"
-                                        >
-                                            {showValue ? <VisibilityOff /> : <Visibility />}
-                                        </IconButton>
-                                    </InputAdornment>
-                                )}
-                                {loading ? <CircularProgress color="inherit" size={20} /> : null}
-                                {params.InputProps.endAdornment}
-                            </React.Fragment>
-                        ),
-                    }}
-                    {...props} // Pass other TextField props like margin, required, etc.
-                />
-            )}
-            renderOption={(props, option) => (
-                 <Box component="li" {...props} key={option}>
-                    {option}
-                 </Box>
-            )}
+            getOptionLabel={getOptionLabel}
+            renderInput={renderInput}
+            renderOption={renderOption}
             // Disable default filtering, we show all fetched options
             filterOptions={(x) => x}
         />

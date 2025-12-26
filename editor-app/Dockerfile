@@ -37,7 +37,8 @@ RUN npm ci && \
     else \
         echo "sqlite3 not initially found, installing from source for ARM64" && \
         npm_config_build_from_source=true npm_config_arch=arm64 npm install sqlite3 --no-save; \
-    fi
+    fi && \
+    (npm audit fix || npm audit)
 
 # Copy the rest of the backend source code
 COPY backend/ ./
@@ -50,7 +51,7 @@ WORKDIR /app/frontend
 COPY frontend/package*.json ./
 
 # Install frontend dependencies
-RUN npm ci
+RUN npm ci && (npm audit fix || npm audit)
 
 # Copy homepageversion.txt to /app so vite.config.js can access it during build
 # vite.config.js is in /app/frontend and reads ../../homepageversion.txt

@@ -2,6 +2,45 @@
 
 This document outlines the key changes and features introduced in each version of the Homepage Editor.
 
+## Version 0.8.5
+
+This version focuses on Homepage v1.8.0 compatibility, React 19 stability improvements, and multi-platform Docker deployment.
+
+*   **Homepage v1.8.0 Compatibility:**
+    *   **Version Baseline Update:** Updated `homepageversion.txt` from v1.2.0 to v1.8.0, establishing compatibility with the latest Homepage release.
+    *   **10 New Service Widgets Implemented:**
+        1. **Wallos** - Finance tracking application (URL + API key)
+        2. **Trilium** - Advanced note-taking (URL + ETAPI token)
+        3. **Backrest** - Backup solution with optional authentication
+        4. **Checkmk** - Comprehensive monitoring (URL + site + username + password)
+        5. **Filebrowser** - File management with conditional validation (URL + username + password + optional authHeader)
+        6. **Jellystat** - Jellyfin statistics with number validation (URL + API key + optional days parameter)
+        7. **Yourspotify** - Spotify statistics with interval dropdown (URL + API key + optional interval: day/week/month/year/all)
+        8. **Komodo** - Container management with boolean flags (URL + key + showSummary + showStacks)
+        9. **Pangolin** - Network monitoring with checkbox array (URL + key + org + up to 4 of 6 fields)
+        10. **Unraid** - Server management with 4 optional pool fields (URL + key + pool1-4)
+    *   **Total Service Widgets:** Now supporting 148 service widgets (100% coverage for Homepage v1.8.0)
+*   **React 19 Compatibility Fixes:**
+    *   **Flickering Resolution:** Fixed re-render loops in `EnvVarAutocompleteInput.jsx` affecting ALL 148 widgets
+    *   **Technical Improvements:**
+        - Implemented `useRef(false)` to track fetch state without triggering re-renders
+        - Removed unstable dependencies from `fetchOptions` callback
+        - Memoized entire `endAdornment` JSX with `useMemo` for stable rendering
+        - Memoized visibility toggle handlers with `useCallback`
+    *   **Impact:** All password and API key fields across all widgets now render stably without flickering
+*   **Bug Fixes:**
+    *   **.env Path Resolution:** Fixed backend path resolution in `server.js` (line 2065)
+        - Local development: Now correctly reads from `./local_data/.env`
+        - Production Docker: Correctly reads from `/compose_root/.env` (mounted volume)
+        - Resolved issue where environment variables weren't showing on `/env-vars` page
+    *   **Corrected Patterns:** Updated with accurate React 19 patterns:
+        - Two-parameter onChange signature: `onChange(dataForParent, errors)`
+        - Individual state pattern instead of single state object
+        - Two useEffect pattern for initialization and validation
+        - Memoized handler patterns with `useCallback`
+    *   **Architectures Supported:** linux/amd64 and linux/arm64
+    *   **Docker Hub Secret Management:** Updated `pushtoregistry-Dockerhub.sh` to use Infisical for secure credential management
+
 ## Version 0.8
 
 This version focuses on significant security enhancements and critical vulnerability fixes, making the editor more robust and secure.
@@ -13,6 +52,9 @@ This version focuses on significant security enhancements and critical vulnerabi
 *   **Critical Vulnerability Fixes (CVEs):**
     *   Addressed CVE-2025-47935 by updating the `multer` package.
     *   Addressed CVE-2024-21538 by updating the global `npm` version within the Docker image.
+*   **Bug Fixes:**
+    *   **Image Management Authentication:** Fixed authentication issue on Image Management page by migrating from `localStorage.getItem('authToken')` to the centralized `getAccessToken()` utility function, ensuring consistent token retrieval across the application.
+    *   **External CDN Image Loading:** Fixed Content Security Policy (CSP) headers that were blocking external CDN images from homarr-labs/dashboard-icons and other sources. Updated `imgSrc` directive to allow all HTTPS images and added `https://cdn.jsdelivr.net` to `connectSrc` directive to allow metadata fetching. This resolved the issue where service and bookmark icons were displaying as `error.svg` in production.
 
 ## Version 0.7
 
