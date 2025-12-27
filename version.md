@@ -2,6 +2,60 @@
 
 This document outlines the key changes and features introduced in each version of the Homepage Editor.
 
+## Version 0.8.6
+
+This version completes all remaining security requirements from the PRD, implements ProxmoxVM widget for full Homepage v1.8.0+ compatibility, and fixes a critical widget editing bug.
+
+*   **Security Enhancements (SR4, SR5, SR6):**
+    *   **HTTP Security Headers (SR5):** Enhanced `@fastify/helmet` configuration with comprehensive web security protections
+        - **Conditional HSTS:** Enabled only when `HTTPS_ENABLED=true` or `NODE_ENV=production` (max-age: 1 year, includeSubDomains)
+        - **Referrer-Policy:** Set to `strict-origin-when-cross-origin` for balanced security and functionality
+        - **X-Content-Type-Options:** Explicitly set to `nosniff` to prevent MIME sniffing attacks
+        - **X-Frame-Options:** Set to `DENY` to prevent clickjacking attacks
+        - **Enhanced CSP Documentation:** Clear comments explaining why `unsafe-inline` is required for React/Vite/MUI
+        - **Testing:** 21/21 automated tests passed, user verified no CSP violations
+    *   **API Rate Limiting (SR6):** Implemented custom in-memory rate limiter to protect sensitive endpoints
+        - **Strict Limits:** 5 requests per minute on login, admin setup, and password change endpoints
+        - **Global Limiter:** 100 requests per minute available for other endpoints
+        - **Automatic Cleanup:** Expired entries removed every 5 minutes
+        - **Clear Error Messages:** HTTP 429 responses with retry-after timing
+        - **Integration:** Works alongside existing account lockout feature (9 failed attempts)
+    *   **Enhanced Dependency Scanning (SR4):** Docker build now enforces security audit compliance
+        - **Build Failure:** Docker build fails on HIGH or CRITICAL vulnerabilities (`npm audit --audit-level=high`)
+        - **Fixed Vulnerabilities:** Resolved 6 existing vulnerabilities (1 moderate, 5 high)
+        - **Updated Packages:** glob, js-yaml, jws, multer, tar-fs, validator
+        - **Current Status:** 0 vulnerabilities in both backend and frontend
+*   **ProxmoxVM Widget Implementation (Widget #150):**
+    *   **New Widget:** ProxmoxVM service widget for monitoring specific Proxmox VMs/LXC containers
+        - **Required Fields:** URL, API Token User, API Token Secret, Node Name, VM/Container ID
+        - **Optional Field:** Type selection (QEMU/LXC), defaults to QEMU
+        - **YAML Field:** Uses `vmtype` field to avoid confusion with widget `type`
+        - **Features:** .env variable autocomplete support, password visibility toggle
+    *   **Widget Count:** Updated from 148 → **150 widgets (100% Homepage v1.8.0+ compatibility)**
+*   **Critical Bug Fix:**
+    *   **Black Screen Issue:** Resolved "Invalid hook call" errors affecting ALL widgets when editing services
+        - **Root Cause:** Vite bundling multiple React instances for lazy-loaded components
+        - **Fix 1:** Added `resolve.dedupe` in vite.config.js to ensure single React instance
+        - **Fix 2:** Added `optimizeDeps.include` to pre-bundle React, React-DOM, MUI, and Emotion
+        - **Fix 3:** Separated `initialWidgetData` from `widgetData` to prevent infinite loops
+        - **Fix 4:** Removed invalid widget types (calendar, plex-tautulli)
+        - **Fix 5:** Fixed unifi-controller mismatch in component comments
+        - **User Verification:** All widgets now work correctly, YAML structure validates
+*   **Testing Resources Created:**
+    *   `test_code/test-security-headers.js` - Automated security header verification (21 tests)
+    *   `test_code/test-rate-limiting.js` - Automated rate limiting tests (4 scenarios)
+    *   `test_code/SECURITY_HEADERS_TESTING_GUIDE.md` - Comprehensive manual testing guide (450+ lines)
+    *   `test_code/PROXMOXVM_TESTING_GUIDE.md` - ProxmoxVM widget testing guide
+    *   `test_code/test-proxmoxvm-widget.js` - Automated ProxmoxVM widget tests
+*   **Security Status:**
+    *   ✅ SR1: JWT Token Management (Access & Refresh Tokens)
+    *   ✅ SR2: Account Lockout (9 failed attempts, 1-hour lockout)
+    *   ✅ SR3: User Profile Management UI (Password & Email)
+    *   ✅ SR4: Automated Dependency Scanning (Fails on HIGH/CRITICAL)
+    *   ✅ SR5: HTTP Security Headers (Comprehensive protection)
+    *   ✅ SR6: API Rate Limiting (5 req/min on sensitive endpoints)
+    *   **Result:** 100% of PRD Security Requirements Complete
+
 ## Version 0.8.5
 
 This version focuses on Homepage v1.8.0 compatibility, React 19 stability improvements, and multi-platform Docker deployment.

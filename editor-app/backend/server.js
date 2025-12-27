@@ -166,28 +166,100 @@ fastify.register(require('@fastify/cookie'), {
   parseOptions: {}
 });
 
-// Register fastify-helmet for security headers
+// Register fastify-helmet for security headers (SR5: HTTP Security Headers)
+// Determine if HTTPS is being used (check environment)
+// HSTS should only be enabled when the app is served over HTTPS
+const isHttps = process.env.HTTPS_ENABLED === 'true' || process.env.NODE_ENV === 'production';
+
 fastify.register(fastifyHelmet, {
-  // Default CSP is quite restrictive, might need adjustment for inline scripts/styles or specific sources
-  // For now, let's use a basic policy and adjust if frontend breaks.
-  // A more robust approach would be to configure this based on frontend needs.
+  // Content Security Policy - allows inline scripts/styles required by React/Vite/MUI
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'"], // Allow inline scripts for now, review later
-      styleSrc: ["'self'", "'unsafe-inline'"],  // Allow inline styles for now, review later
+      scriptSrc: ["'self'", "'unsafe-inline'"], // Required for Vite HMR and React
+      styleSrc: ["'self'", "'unsafe-inline'"],  // Required for MUI emotion CSS-in-JS
       imgSrc: ["'self'", "data:", "https:", "http://localhost:*"], // Allow all HTTPS images for CDN icons (homarr-labs, Google, etc.)
-      connectSrc: ["'self'", "https://cdn.jsdelivr.net", "http://localhost:*", "ws://localhost:*"], // Allow CDN metadata fetch
+      connectSrc: ["'self'", "https://cdn.jsdelivr.net", "http://localhost:*", "ws://localhost:*"], // Allow CDN metadata fetch and WebSocket
       fontSrc: ["'self'"],
       objectSrc: ["'none'"],
-      frameAncestors: ["'none'"], // Prevents clickjacking
+      frameAncestors: ["'none'"], // Prevents clickjacking (equivalent to X-Frame-Options: DENY)
     },
   },
-  // Other default helmet options are generally good.
-  // We can override specific ones if needed, e.g.:
-  // hsts: { maxAge: 31536000, includeSubDomains: true, preload: true },
-  // referrerPolicy: { policy: 'strict-origin-when-cross-origin' }
+  // HTTP Strict Transport Security (HSTS) - only enable for HTTPS deployments
+  hsts: isHttps ? {
+    maxAge: 31536000, // 1 year in seconds
+    includeSubDomains: true,
+    preload: false // Set to true only after testing and registering with HSTS preload list
+  } : false, // Disable HSTS for HTTP-only development environments
+  // Referrer Policy - controls how much referrer information is sent
+  referrerPolicy: {
+    policy: 'strict-origin-when-cross-origin' // Send origin for cross-origin, full URL for same-origin
+  },
+  // Explicitly enable X-Content-Type-Options (prevents MIME sniffing)
+  xContentTypeOptions: true, // Sets "X-Content-Type-Options: nosniff"
+  // Explicitly enable X-Frame-Options (prevents clickjacking)
+  xFrameOptions: { action: 'deny' }, // Sets "X-Frame-Options: DENY"
 });
+
+// Register rate limiting (SR6: API Rate Limiting)
+// Using a simple in-memory Map-based rate limiter for full control
+
+// Rate limit stores: IP -> { count, resetTime }
+const rateLimitStore = new Map();
+
+// Cleanup old entries every 5 minutes
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, value] of rateLimitStore.entries()) {
+    if (now > value.resetTime) {
+      rateLimitStore.delete(key);
+    }
+  }
+}, 5 * 60 * 1000);
+
+/**
+ * Generic rate limiter function
+ * @param {number} max - Maximum requests allowed
+ * @param {number} windowMs - Time window in milliseconds
+ */
+function createRateLimiter(max, windowMs) {
+  return async (request, reply) => {
+    const key = `${request.ip}-${request.routeOptions.url}-${request.routeOptions.method}`;
+    const now = Date.now();
+
+    const record = rateLimitStore.get(key);
+
+    if (!record || now > record.resetTime) {
+      // No record or expired - create new
+      rateLimitStore.set(key, {
+        count: 1,
+        resetTime: now + windowMs
+      });
+      return; // Allow request
+    }
+
+    if (record.count >= max) {
+      // Rate limit exceeded
+      const retryAfter = Math.ceil((record.resetTime - now) / 1000);
+      return reply.code(429).send({
+        statusCode: 429,
+        error: 'Too Many Requests',
+        message: `Too many attempts. Please try again in ${retryAfter} seconds.`,
+        retryAfter: retryAfter
+      });
+    }
+
+    // Increment count
+    record.count++;
+    rateLimitStore.set(key, record);
+  };
+}
+
+// Strict rate limiter for sensitive endpoints (5 requests per minute)
+const strictRateLimiter = createRateLimiter(5, 60 * 1000);
+
+// Global rate limiter for normal endpoints (100 requests per minute)
+const globalRateLimiter = createRateLimiter(100, 60 * 1000);
 
 // In-memory refresh token store (for production, consider Redis or database)
 const refreshTokenStore = new Map();
@@ -282,13 +354,16 @@ fastify.get('/api/setup/status', async (request, reply) => {
  * Expects { email, password } in the request body.
  */
 fastify.post('/api/setup/admin', {
-  preHandler: createValidationMiddleware({
-    maxSize: 1024, // 1KB limit for setup requests
-    body: {
-      email: { type: 'email', required: true },
-      password: { type: 'password', required: true }
-    }
-  })
+  preHandler: [
+    strictRateLimiter, // Rate limiting: 5 attempts per minute
+    createValidationMiddleware({
+      maxSize: 1024, // 1KB limit for setup requests
+      body: {
+        email: { type: 'email', required: true },
+        password: { type: 'password', required: true }
+      }
+    })
+  ]
 }, async (request, reply) => {
   const { email, password } = request.body;
 
@@ -320,13 +395,16 @@ fastify.post('/api/setup/admin', {
  * Expects { email, password } in the request body.
  */
 fastify.post('/api/auth/login', {
-  preHandler: createValidationMiddleware({
-    maxSize: 1024, // 1KB limit for login requests
-    body: {
-      email: { type: 'email', required: true },
-      password: { type: 'text', required: true, maxLength: 128, stripHtml: false }
-    }
-  })
+  preHandler: [
+    strictRateLimiter, // Rate limiting: 5 attempts per minute
+    createValidationMiddleware({
+      maxSize: 1024, // 1KB limit for login requests
+      body: {
+        email: { type: 'email', required: true },
+        password: { type: 'text', required: true, maxLength: 128, stripHtml: false }
+      }
+    })
+  ]
 }, async (request, reply) => {
   const { email, password } = request.body;
 
@@ -513,6 +591,7 @@ fastify.get('/api/auth/status', {
  */
 fastify.put('/api/users/me/password', {
   preHandler: [
+    strictRateLimiter, // Rate limiting: 5 attempts per minute
     async (request, reply) => {
       try {
         await request.jwtVerify(); // Ensure user is logged in
