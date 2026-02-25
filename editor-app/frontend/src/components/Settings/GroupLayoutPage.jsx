@@ -3,17 +3,19 @@ import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, us
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { Container, Typography, List, ListItem, ListItemText, Paper, Box, CircularProgress, Alert, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Button } from '@mui/material';
+import { Container, Typography, List, ListItem, ListItemText, Paper, Box, CircularProgress, Alert, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Button, Chip } from '@mui/material';
 import DragHandleIcon from '@mui/icons-material/DragHandle';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { useSnackbar } from 'notistack';
 
-import { fetchSettingsApi, saveSettingsApi, renameGroupApi, deleteGroupApi, fetchBookmarksApi, fetchServicesApi, saveBookmarkGroupsOrderApi } from '../../utils/api';
+import { fetchSettingsApi, saveSettingsApi, renameGroupApi, deleteGroupApi, fetchBookmarksApi, fetchServicesApi, saveBookmarkGroupsOrderApi, saveServiceGroupsOrderApi } from '../../utils/api';
 import ConfirmationDialog from '../ConfirmationDialog';
 
-// Sortable Item Component
-function SortableItem({ id, name, onRenameClick, onDeleteClick }) {
+const SERVICE_COLOR = '#2196f3';
+const BOOKMARK_COLOR = '#ff9800';
+
+function SortableItem({ id, name, groupType, onRenameClick, onDeleteClick }) {
   const {
     attributes,
     listeners,
@@ -22,6 +24,10 @@ function SortableItem({ id, name, onRenameClick, onDeleteClick }) {
     transition,
     isDragging,
   } = useSortable({ id });
+
+  const borderColor = groupType === 'service' ? SERVICE_COLOR : groupType === 'bookmark' ? BOOKMARK_COLOR : 'transparent';
+  const chipLabel = groupType === 'service' ? 'Service' : groupType === 'bookmark' ? 'Bookmark' : 'Layout';
+  const chipColor = groupType === 'service' ? SERVICE_COLOR : groupType === 'bookmark' ? BOOKMARK_COLOR : '#9e9e9e';
 
   const sxStyles = {
     transform: CSS.Transform.toString(transform),
@@ -32,6 +38,7 @@ function SortableItem({ id, name, onRenameClick, onDeleteClick }) {
     marginBottom: '8px',
     backgroundColor: (theme) => theme.palette.background.paper,
     color: (theme) => theme.palette.text.primary,
+    borderLeft: `4px solid ${borderColor}`,
   };
 
   return (
@@ -41,6 +48,16 @@ function SortableItem({ id, name, onRenameClick, onDeleteClick }) {
             <DragHandleIcon />
          </IconButton>
          <ListItemText primary={name} sx={{ flexGrow: 1 }} />
+         <Chip
+           label={chipLabel}
+           size="small"
+           sx={{
+             backgroundColor: chipColor,
+             color: '#fff',
+             fontWeight: 500,
+             mr: 1,
+           }}
+         />
          <IconButton
            aria-label="rename group"
            onClick={() => onRenameClick(id)}
@@ -62,9 +79,9 @@ function SortableItem({ id, name, onRenameClick, onDeleteClick }) {
 
 
 function GroupLayoutPage() {
-  const [layoutGroups, setLayoutGroups] = useState([]); // This will remain the single source of truth for DND order
-  const [serviceGroupNames, setServiceGroupNames] = useState(new Set()); // To identify service groups
-  const [bookmarkGroupNamesState, setBookmarkGroupNamesState] = useState(new Set()); // To identify bookmark groups
+  const [layoutGroups, setLayoutGroups] = useState([]);
+  const [serviceGroupNames, setServiceGroupNames] = useState(new Set());
+  const [bookmarkGroupNamesState, setBookmarkGroupNamesState] = useState(new Set());
   const [settings, setSettings] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -94,13 +111,8 @@ function GroupLayoutPage() {
         fetchServicesApi()
       ]);
 
-      console.log("GroupLayoutPage - Fetched settingsDataResponse:", JSON.stringify(settingsDataResponse, null, 2));
-      console.log("GroupLayoutPage - Fetched bookmarksData:", JSON.stringify(bookmarksData, null, 2));
-      console.log("GroupLayoutPage - Fetched servicesData:", JSON.stringify(servicesData, null, 2));
-
       const currentSettings = settingsDataResponse?.settings || {};
       let layoutFromSettings = Array.isArray(currentSettings.layout) ? [...currentSettings.layout] : [];
-      console.log("GroupLayoutPage - Initial layoutFromSettings:", JSON.stringify(layoutFromSettings, null, 2));
 
       const localServiceGroupNames = new Set();
       if (Array.isArray(servicesData)) {
@@ -112,7 +124,6 @@ function GroupLayoutPage() {
         });
       }
       setServiceGroupNames(localServiceGroupNames);
-      console.log("GroupLayoutPage - Extracted serviceGroupNames:", Array.from(localServiceGroupNames));
 
       const localBookmarkGroupNames = new Set();
       if (Array.isArray(bookmarksData)) {
@@ -124,11 +135,9 @@ function GroupLayoutPage() {
         });
       }
       setBookmarkGroupNamesState(localBookmarkGroupNames);
-      console.log("GroupLayoutPage - Extracted bookmarkGroupNamesState:", Array.from(localBookmarkGroupNames));
-      
+
+      // Add groups from services/bookmarks that aren't yet in settings layout
       const existingLayoutGroupNames = new Set(layoutFromSettings.map(g => g.name));
-      console.log("GroupLayoutPage - Existing layout group names from settings:", Array.from(existingLayoutGroupNames));
-      
       const allKnownGroupNames = new Set([...localServiceGroupNames, ...localBookmarkGroupNames]);
 
       allKnownGroupNames.forEach(knownGroupName => {
@@ -139,20 +148,12 @@ function GroupLayoutPage() {
             style: "row",
             columns: 4
           });
-          console.log(`GroupLayoutPage - Added default layout for new group: ${knownGroupName}`);
         }
       });
-      
-      // Optional: Filter layoutFromSettings to only include groups that currently exist in services or bookmarks
-      // layoutFromSettings = layoutFromSettings.filter(lg => allKnownGroupNames.has(lg.name));
-      // console.log("GroupLayoutPage - Layout after filtering non-existent groups:", JSON.stringify(layoutFromSettings, null, 2));
-
 
       setLayoutGroups(layoutFromSettings);
       const updatedSettingsForState = { ...currentSettings, layout: layoutFromSettings };
       setSettings(updatedSettingsForState);
-      console.log("GroupLayoutPage - Final layoutGroups state set:", JSON.stringify(layoutFromSettings, null, 2));
-      console.log("GroupLayoutPage - Final settings state set:", JSON.stringify(updatedSettingsForState, null, 2));
 
     } catch (err) {
       console.error("Failed to fetch settings or bookmarks for layout:", err);
@@ -167,6 +168,13 @@ function GroupLayoutPage() {
     fetchLayout();
   }, [fetchLayout]);
 
+  // Determine the type of a group by name
+  const getGroupType = useCallback((groupName) => {
+    if (serviceGroupNames.has(groupName)) return 'service';
+    if (bookmarkGroupNamesState.has(groupName)) return 'bookmark';
+    return 'layout-only';
+  }, [serviceGroupNames, bookmarkGroupNamesState]);
+
   const handleDragEnd = useCallback(async (event) => {
     const { active, over } = event;
 
@@ -176,57 +184,58 @@ function GroupLayoutPage() {
 
       if (oldIndex !== -1 && newIndex !== -1) {
         const newOrder = arrayMove(layoutGroups, oldIndex, newIndex);
-        setLayoutGroups(newOrder); 
+        setLayoutGroups(newOrder);
 
-        const { layout: _, ...otherSettings } = settings || {}; 
+        const { layout: _, ...otherSettings } = settings || {};
         const updatedSettings = {
-          ...otherSettings, 
-          layout: newOrder,  
+          ...otherSettings,
+          layout: newOrder,
         };
-        console.log("Constructed updatedSettings for saving:", updatedSettings); 
 
         try {
-          console.log("Attempting to save new layout order (array) to settings.yaml:", newOrder);
+          // Save layout order to settings.yaml
           await saveSettingsApi(updatedSettings);
           setSettings(prevSettings => ({
               ...(prevSettings || {}),
               ...otherSettings,
               layout: newOrder
           }));
-          enqueueSnackbar('Group order saved to settings.yaml successfully!', { variant: 'success' });
+          enqueueSnackbar('Group order saved to settings.yaml', { variant: 'success' });
 
-          // Now, also save the order of bookmark groups to bookmarks.yaml
+          // Save bookmark group order to bookmarks.yaml
           const orderedBookmarkGroupNames = newOrder
             .filter(group => bookmarkGroupNamesState.has(group.name))
             .map(group => group.name);
 
           if (orderedBookmarkGroupNames.length > 0) {
-            console.log("Attempting to save bookmark groups order to bookmarks.yaml:", orderedBookmarkGroupNames);
             await saveBookmarkGroupsOrderApi(orderedBookmarkGroupNames);
-            enqueueSnackbar('Bookmark group order saved to bookmarks.yaml successfully!', { variant: 'success' });
           }
 
-        } catch (saveError) {
-          console.error("Failed to save settings or bookmark group order:", saveError);
-          let userMessage = 'Failed to save the new group order. Reverting local changes.';
-          if (saveError.message.includes('bookmarks.yaml')) {
-            userMessage = 'Failed to save bookmark group order to bookmarks.yaml. Settings order might be saved. Reverting local changes.';
-          } else if (saveError.message.includes('settings.yaml')) {
-             userMessage = 'Failed to save group order to settings.yaml. Reverting local changes.';
+          // Save service group order to services.yaml
+          const orderedServiceGroupNames = newOrder
+            .filter(group => serviceGroupNames.has(group.name))
+            .map(group => group.name);
+
+          if (orderedServiceGroupNames.length > 0) {
+            await saveServiceGroupsOrderApi(orderedServiceGroupNames);
           }
+
+          enqueueSnackbar('All config files synced successfully!', { variant: 'success' });
+
+        } catch (saveError) {
+          console.error("Failed to save group order:", saveError);
+          const userMessage = 'Failed to save the new group order. Reverting.';
           setError(userMessage);
-          enqueueSnackbar(userMessage.replace(' Reverting local changes.', ''), { variant: 'error' });
-          fetchLayout(); // Revert UI to last known good state
+          enqueueSnackbar('Failed to save group order', { variant: 'error' });
+          fetchLayout();
         }
-      } else {
-         console.warn("Drag end event had invalid indices:", { activeId: active.id, overId: over.id, oldIndex, newIndex });
       }
     }
-  }, [layoutGroups, settings, enqueueSnackbar, fetchLayout]);
+  }, [layoutGroups, settings, serviceGroupNames, bookmarkGroupNamesState, enqueueSnackbar, fetchLayout]);
 
   const handleRenameClick = (groupName) => {
     setGroupToRename(groupName);
-    setNewGroupName(groupName); 
+    setNewGroupName(groupName);
     setRenameDialogOpen(true);
   };
 
@@ -234,7 +243,7 @@ function GroupLayoutPage() {
     setRenameDialogOpen(false);
     setGroupToRename(null);
     setNewGroupName('');
-    setRenameLoading(false); 
+    setRenameLoading(false);
   };
 
   const handleRenameSubmit = async () => {
@@ -243,7 +252,7 @@ function GroupLayoutPage() {
       return;
     }
     setRenameLoading(true);
-    setError(null); 
+    setError(null);
 
     try {
       await renameGroupApi(groupToRename, newGroupName.trim());
@@ -253,9 +262,9 @@ function GroupLayoutPage() {
     } catch (renameError) {
       console.error("Failed to rename group:", renameError);
       const errorMsg = renameError?.data?.error || renameError?.message || 'Failed to rename group.';
-      setError(`Rename failed: ${errorMsg}`); 
+      setError(`Rename failed: ${errorMsg}`);
       enqueueSnackbar(`Rename failed: ${errorMsg}`, { variant: 'error' });
-      setRenameLoading(false); 
+      setRenameLoading(false);
     }
   };
 
@@ -267,14 +276,14 @@ function GroupLayoutPage() {
   const handleDeleteCancel = () => {
     setDeleteDialogOpen(false);
     setGroupToDelete(null);
-    setDeleteLoading(false); 
+    setDeleteLoading(false);
   };
 
   const handleDeleteConfirm = async () => {
     if (!groupToDelete) return;
 
     setDeleteLoading(true);
-    setError(null); 
+    setError(null);
 
     try {
       await deleteGroupApi(groupToDelete);
@@ -284,20 +293,32 @@ function GroupLayoutPage() {
     } catch (deleteError) {
       console.error("Failed to delete group:", deleteError);
       const errorMsg = deleteError?.data?.error || deleteError?.message || 'Failed to delete group.';
-      setError(`Delete failed: ${errorMsg}`); 
+      setError(`Delete failed: ${errorMsg}`);
       enqueueSnackbar(`Delete failed: ${errorMsg}`, { variant: 'error' });
-      setDeleteLoading(false); 
+      setDeleteLoading(false);
     }
   };
 
   return (
-    <Container maxWidth="lg"> {/* Changed maxWidth to lg for wider layout */}
+    <Container maxWidth="md">
       <Typography variant="h4" gutterBottom sx={{ mt: 3, mb: 2 }}>
         Reorder Groups in Settings
       </Typography>
-      <Typography variant="body1" gutterBottom sx={{ mb: 3 }}>
-        Drag and drop the groups below to change their display order on the homepage. Changes are saved automatically.
+      <Typography variant="body1" gutterBottom sx={{ mb: 1 }}>
+        Drag and drop the groups below to change their display order on the homepage. Changes are saved automatically to settings.yaml, services.yaml, and bookmarks.yaml.
       </Typography>
+
+      {/* Legend */}
+      <Box sx={{ display: 'flex', gap: 3, mb: 3, alignItems: 'center' }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+          <Box sx={{ width: 16, height: 16, backgroundColor: SERVICE_COLOR, borderRadius: '2px' }} />
+          <Typography variant="body2" color="text.secondary">Service Group</Typography>
+        </Box>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+          <Box sx={{ width: 16, height: 16, backgroundColor: BOOKMARK_COLOR, borderRadius: '2px' }} />
+          <Typography variant="body2" color="text.secondary">Bookmark Group</Typography>
+        </Box>
+      </Box>
 
       {loading && (
         <Box sx={{ display: 'flex', justifyContent: 'center', my: 3 }}>
@@ -315,73 +336,32 @@ function GroupLayoutPage() {
           collisionDetection={closestCenter}
           onDragEnd={handleDragEnd}
         >
-          {/* Changed Box to a two-column grid for medium screens and up */}
-          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 3 }}>
-            {/* 
-              For now, all groups will render in the first column due to the single SortableContext and List.
-              To truly split into two columns for DND, we'd need two separate SortableContexts 
-              and logic to divide layoutGroups into two arrays (e.g., serviceGroups, bookmarkGroups)
-              and then render them into separate Paper components within this grid.
-              This change just sets up the grid structure.
-            */}
-            <Paper elevation={2} sx={{ p: 2 }}>
-              <Typography variant="h6" gutterBottom>Service Groups</Typography>
-              <SortableContext
-                items={layoutGroups.filter(g => serviceGroupNames.has(g.name)).map(group => group.name)}
-                strategy={verticalListSortingStrategy}
-              >
-                <List>
-                  {layoutGroups
-                    .filter(group => serviceGroupNames.has(group.name))
-                    .map((group) => (
-                    typeof group.name === 'string' ? (
-                       <SortableItem
-                         key={group.name}
-                         id={group.name}
-                         name={group.name}
-                         onRenameClick={handleRenameClick}
-                         onDeleteClick={handleDeleteClick}
-                       />
-                    ) : (
-                       console.warn("Skipping service group with invalid name:", group),
-                       null
-                    )
-                  ))}
-                </List>
-              </SortableContext>
-            </Paper>
-            <Paper elevation={2} sx={{ p: 2 }}>
-              <Typography variant="h6" gutterBottom>Bookmark Groups</Typography>
-              <SortableContext
-                items={layoutGroups.filter(g => bookmarkGroupNamesState.has(g.name) && !serviceGroupNames.has(g.name)).map(group => group.name)}
-                strategy={verticalListSortingStrategy}
-              >
-                <List>
-                  {layoutGroups
-                    .filter(group => bookmarkGroupNamesState.has(group.name) && !serviceGroupNames.has(group.name)) // Show only if NOT already in service groups
-                    .map((group) => (
-                    typeof group.name === 'string' ? (
-                       <SortableItem
-                         key={group.name}
-                         id={group.name}
-                         name={group.name}
-                         onRenameClick={handleRenameClick}
-                         onDeleteClick={handleDeleteClick}
-                       />
-                    ) : (
-                       console.warn("Skipping bookmark group with invalid name:", group),
-                       null
-                    )
-                  ))}
-                </List>
-              </SortableContext>
-            </Paper>
+          <Box sx={{ maxWidth: 800, mx: 'auto' }}>
+            <SortableContext
+              items={layoutGroups.map(group => group.name)}
+              strategy={verticalListSortingStrategy}
+            >
+              <List>
+                {layoutGroups.map((group) => (
+                  typeof group.name === 'string' ? (
+                    <SortableItem
+                      key={group.name}
+                      id={group.name}
+                      name={group.name}
+                      groupType={getGroupType(group.name)}
+                      onRenameClick={handleRenameClick}
+                      onDeleteClick={handleDeleteClick}
+                    />
+                  ) : null
+                ))}
+              </List>
+            </SortableContext>
           </Box>
         </DndContext>
       )}
-       {!loading && !error && layoutGroups.length === 0 && (
-         <Typography sx={{ mt: 2 }}>No layout groups found in settings.yaml or the layout section is empty/invalid.</Typography>
-       )}
+      {!loading && !error && layoutGroups.length === 0 && (
+        <Typography sx={{ mt: 2 }}>No layout groups found in settings.yaml or the layout section is empty/invalid.</Typography>
+      )}
 
      <Dialog open={renameDialogOpen} onClose={handleRenameClose} aria-labelledby="rename-group-dialog-title">
        <DialogTitle id="rename-group-dialog-title">Rename Group "{groupToRename}"</DialogTitle>

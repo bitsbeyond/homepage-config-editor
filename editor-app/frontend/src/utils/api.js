@@ -234,6 +234,14 @@ export async function saveBookmarkGroupsOrderApi(orderedGroupNames) {
     });
 }
 
+/** Saves the order of all service groups (updates services.yaml) */
+export async function saveServiceGroupsOrderApi(orderedGroupNames) {
+    return apiRequest('/api/services/groups-order', {
+        method: 'PUT',
+        body: JSON.stringify({ orderedGroupNames }),
+    });
+}
+
 /** Renames a group across all relevant configuration files */
 export async function renameGroupApi(oldName, newName) {
     const encodedOldName = encodeURIComponent(oldName);

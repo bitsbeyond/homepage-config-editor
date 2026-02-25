@@ -357,22 +357,31 @@ function EditServiceForm({ open, onClose, onServiceUpdated, serviceToEdit, curre
         const targetGroupName = finalGroupName || ""; // Use "" for Ungrouped (empty string key)
         const newServiceEntry = { [finalServiceName]: updatedServiceDetails }; // { "NewServiceName": {details} }
 
+        // Find the original index before removing, so we can preserve position
+        let originalIndex = -1;
+        if (updatedGroupsDataObject[originalGroupName]) {
+            originalIndex = updatedGroupsDataObject[originalGroupName].findIndex(service => {
+                if (service && typeof service === 'object' && typeof service.name === 'string' && service.originalData) {
+                    return service.name === originalServiceName;
+                } else if (service && typeof service === 'object') {
+                    return Object.keys(service)[0] === originalServiceName;
+                }
+                return false;
+            });
+        }
+
         // Remove the original service from its original group
         if (updatedGroupsDataObject[originalGroupName]) {
             updatedGroupsDataObject[originalGroupName] = updatedGroupsDataObject[originalGroupName].filter(
                 service => {
-                    // Check if 'service' is a DND-transformed item or a direct service entry
                     if (service && typeof service === 'object' && typeof service.name === 'string' && service.originalData) {
-                        // It's a DND item, compare its name
                         return service.name !== originalServiceName;
                     } else if (service && typeof service === 'object') {
-                        // It's a direct service entry { "ServiceName": {...} }
                         return Object.keys(service)[0] !== originalServiceName;
                     }
-                    return true; // Should not happen if data is consistent
+                    return true;
                 }
             );
-            // If the original group is now empty and it's not the 'Ungrouped' group, remove the group key
             if (updatedGroupsDataObject[originalGroupName].length === 0 && originalGroupName !== "") {
                 delete updatedGroupsDataObject[originalGroupName];
             }
@@ -380,11 +389,17 @@ function EditServiceForm({ open, onClose, onServiceUpdated, serviceToEdit, curre
             console.warn(`Original group '${originalGroupName}' not found during edit. This might happen if it was deleted concurrently.`);
         }
 
-        // Add the (potentially renamed or modified) service to the target group
+        // Add the service back — preserve position if staying in the same group
         if (!updatedGroupsDataObject[targetGroupName]) {
-            updatedGroupsDataObject[targetGroupName] = []; // Create group if it doesn't exist
+            updatedGroupsDataObject[targetGroupName] = [];
         }
-        updatedGroupsDataObject[targetGroupName].push(newServiceEntry);
+        const stayingInSameGroup = targetGroupName === originalGroupName;
+        if (stayingInSameGroup && originalIndex >= 0) {
+            const insertAt = Math.min(originalIndex, updatedGroupsDataObject[targetGroupName].length);
+            updatedGroupsDataObject[targetGroupName].splice(insertAt, 0, newServiceEntry);
+        } else {
+            updatedGroupsDataObject[targetGroupName].push(newServiceEntry);
+        }
 
 
         // Convert the updated object back to an array of group objects for the API

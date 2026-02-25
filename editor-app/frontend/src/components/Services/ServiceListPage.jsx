@@ -1,11 +1,13 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Box, Typography, CircularProgress, Alert, List, ListItem, ListItemText, Paper, Divider, Button, IconButton, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Snackbar, Chip, ListItemIcon } from '@mui/material'; // Added ListItemIcon
+import { Box, Typography, CircularProgress, Alert, List, ListItem, ListItemText, Paper, Divider, Button, IconButton, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Snackbar, Chip, ListItemIcon, TextField, InputAdornment } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
-import DragHandleIcon from '@mui/icons-material/DragHandle'; // Added for DND
+import DragHandleIcon from '@mui/icons-material/DragHandle';
 import WidgetIcon from '@mui/icons-material/Widgets';
-import { fetchServicesApi, saveServicesApi, saveServiceGroupOrderApi } from '../../utils/api'; // Added saveServiceGroupOrderApi
+import SearchIcon from '@mui/icons-material/Search';
+import ClearIcon from '@mui/icons-material/Clear';
+import { fetchServicesApi, saveServicesApi, saveServiceGroupOrderApi, fetchSettingsApi } from '../../utils/api';
 import AddServiceForm from './AddServiceForm';
 import EditServiceForm from './EditServiceForm';
 import {
@@ -64,15 +66,15 @@ const transformDataForDnd = (data, groupNamePrefix = '') => {
 // --- Sortable Service Item Component ---
 import ServiceIcon from './ServiceIcon'; // Import the new ServiceIcon component
 
-function SortableServiceItem({ id, name, details, groupName, onEdit, onDelete }) {
+function SortableServiceItem({ id, name, details, groupName, onEdit, onDelete, dragDisabled }) {
   const {
     attributes,
-    listeners, // listeners for the drag handle
+    listeners,
     setNodeRef,
     transform,
     transition,
     isDragging,
-  } = useSortable({ id });
+  } = useSortable({ id, disabled: dragDisabled });
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -85,13 +87,15 @@ function SortableServiceItem({ id, name, details, groupName, onEdit, onDelete })
     <ListItem
         ref={setNodeRef}
         style={style}
-        {...attributes} // Spread attributes for sortable item
+        {...attributes}
         disablePadding
         secondaryAction={
             <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                <ListItemIcon sx={{ minWidth: 'auto', cursor: 'grab', mr: 0.5 }} {...listeners}> {/* Drag handle listeners here */}
-                    <DragHandleIcon />
-                </ListItemIcon>
+                {!dragDisabled && (
+                    <ListItemIcon sx={{ minWidth: 'auto', cursor: 'grab', mr: 0.5 }} {...listeners}>
+                        <DragHandleIcon />
+                    </ListItemIcon>
+                )}
                 <IconButton edge={false} aria-label="edit" sx={{ p: 1 }} onClick={() => onEdit(groupName, name, details)}>
                     <EditIcon fontSize="small" />
                 </IconButton>
@@ -100,7 +104,7 @@ function SortableServiceItem({ id, name, details, groupName, onEdit, onDelete })
                 </IconButton>
             </Box>
         }
-        sx={{ display: 'flex', alignItems: 'center', pl: 1, pr: '120px' }} // Ensure flex display for icon alignment
+        sx={{ display: 'flex', alignItems: 'center', pl: 1, pr: dragDisabled ? '80px' : '120px' }}
     >
         <ListItemIcon sx={{ minWidth: 'auto', mr: 1.5, display: 'flex', alignItems: 'center' }}> {/* Container for the icon */}
           <ServiceIcon iconName={details?.icon} serviceName={name} size={28} />
@@ -153,22 +157,47 @@ function ServiceListPage() {
     const [serviceToDelete, setServiceToDelete] = useState(null); // State for service targeted for deletion { groupName, serviceName }
     const [deleteError, setDeleteError] = useState(null); // State for delete operation errors
     const [snackbarOpen, setSnackbarOpen] = useState(false); // State for success/error messages
-    const [snackbarMessage, setSnackbarMessage] = useState(''); // Message for snackbar
-    const [snackbarSeverity, setSnackbarSeverity] = useState('success'); // 'success' or 'error'
+    const [snackbarMessage, setSnackbarMessage] = useState('');
+    const [snackbarSeverity, setSnackbarSeverity] = useState('success');
+    const [filterText, setFilterText] = useState('');
+    const isFiltering = filterText.trim().length > 0;
     // Function to load services, wrapped in useCallback if needed elsewhere, but fine here for useEffect
-    const loadServices = useCallback(async () => {
-        setLoading(true);
+    const loadServices = useCallback(async (showSpinner = true) => {
+        if (showSpinner) setLoading(true);
         setError(null);
         try {
-            const data = await fetchServicesApi();
-            // Transform data for DND, ensuring unique IDs if items could have same name across groups
-            // For ServiceListPage, we'll manage groups separately, so prefix isn't strictly needed here
-            // but the transformDataForDnd function expects the raw array of groups.
-            setServiceGroupsData(transformDataForDnd(data));
+            const [data, settingsResponse] = await Promise.all([
+                fetchServicesApi(),
+                fetchSettingsApi().catch(() => null),
+            ]);
+            const dndData = transformDataForDnd(data);
+
+            // Sort groups by settings.yaml layout order so Services page
+            // matches the Group Reorder page display order
+            const layout = settingsResponse?.settings?.layout;
+            const layoutOrder = Array.isArray(layout)
+                ? layout.map(entry => entry.name).filter(Boolean)
+                : [];
+            if (layoutOrder.length > 0) {
+                const sorted = {};
+                for (const groupName of layoutOrder) {
+                    if (dndData[groupName]) {
+                        sorted[groupName] = dndData[groupName];
+                    }
+                }
+                for (const groupName of Object.keys(dndData)) {
+                    if (!sorted[groupName]) {
+                        sorted[groupName] = dndData[groupName];
+                    }
+                }
+                setServiceGroupsData(sorted);
+            } else {
+                setServiceGroupsData(dndData);
+            }
         } catch (err) {
             console.error("Error fetching services:", err);
             setError(err.message || 'Failed to load services.');
-            setServiceGroupsData({}); // Set empty on error
+            setServiceGroupsData({});
         } finally {
             setLoading(false);
         }
@@ -395,7 +424,7 @@ function ServiceListPage() {
 
     // --- Refresh Handlers ---
     const refreshList = () => {
-        setRefreshKey(prevKey => prevKey + 1);
+        loadServices(false);
     };
 
     const handleServiceAdded = () => refreshList();
@@ -442,18 +471,50 @@ function ServiceListPage() {
                 <Typography variant="h4" component="h1">
                     Services
                 </Typography>
-                <Button variant="contained" startIcon={<AddIcon />} onClick={handleAddServiceClick}>
-                    Add Service
-                </Button>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                    <TextField
+                        size="small"
+                        placeholder="Filter services..."
+                        value={filterText}
+                        onChange={(e) => setFilterText(e.target.value)}
+                        slotProps={{
+                            input: {
+                                startAdornment: (
+                                    <InputAdornment position="start">
+                                        <SearchIcon fontSize="small" />
+                                    </InputAdornment>
+                                ),
+                                endAdornment: filterText && (
+                                    <InputAdornment position="end">
+                                        <IconButton size="small" onClick={() => setFilterText('')}>
+                                            <ClearIcon fontSize="small" />
+                                        </IconButton>
+                                    </InputAdornment>
+                                ),
+                            },
+                        }}
+                        sx={{ minWidth: 220 }}
+                    />
+                    <Button variant="contained" startIcon={<AddIcon />} onClick={handleAddServiceClick}>
+                        Add Service
+                    </Button>
+                </Box>
             </Box>
 
             <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
                 {Object.entries(serviceGroupsData).map(([groupName, servicesInGroup]) => {
-                    // servicesInGroup is now an array of { id, name, originalData, details }
+                    if (!servicesInGroup || servicesInGroup.length === 0) return null;
 
-                    if (!servicesInGroup || servicesInGroup.length === 0) {
-                        return null; // Skip rendering empty groups if they somehow occur
-                    }
+                    const filteredServices = isFiltering
+                        ? servicesInGroup.filter(service => {
+                            const query = filterText.trim().toLowerCase();
+                            const nameMatch = service.name.toLowerCase().includes(query);
+                            const descMatch = (service.details?.description || '').toLowerCase().includes(query);
+                            return nameMatch || descMatch;
+                        })
+                        : servicesInGroup;
+
+                    if (filteredServices.length === 0) return null;
 
                     return (
                         <Paper elevation={2} sx={{ mb: 3 }} key={groupName}>
@@ -462,9 +523,9 @@ function ServiceListPage() {
                                     {groupName || 'Ungrouped'}
                                 </Typography>
                             </Box>
-                            <SortableContext items={servicesInGroup.map(item => item.id)} strategy={verticalListSortingStrategy}>
+                            <SortableContext items={filteredServices.map(item => item.id)} strategy={verticalListSortingStrategy}>
                                 <List dense disablePadding>
-                                    {servicesInGroup.map((service, serviceIndex) => (
+                                    {filteredServices.map((service, serviceIndex) => (
                                         <React.Fragment key={service.id}>
                                             <SortableServiceItem
                                                 id={service.id}
@@ -473,8 +534,9 @@ function ServiceListPage() {
                                                 groupName={groupName}
                                                 onEdit={handleEditServiceClick}
                                                 onDelete={handleDeleteClick}
+                                                dragDisabled={isFiltering}
                                             />
-                                            {serviceIndex < servicesInGroup.length - 1 && <Divider component="li" />}
+                                            {serviceIndex < filteredServices.length - 1 && <Divider component="li" />}
                                         </React.Fragment>
                                     ))}
                                 </List>

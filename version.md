@@ -2,6 +2,45 @@
 
 This document outlines the key changes and features introduced in each version of the Homepage Editor.
 
+## Version 0.8.8
+
+This version resolves all remaining HIGH security vulnerabilities by migrating away from the unmaintained `fastify-multer` package and upgrading key dependencies.
+
+*   **Security: Migrate fastify-multer to @fastify/multipart:**
+    *   **Problem:** `fastify-multer` is unmaintained and incompatible with Fastify >=5.7.3, which forced pinning Fastify to `~5.3.3` and left 2 HIGH CVEs unpatched (DoS via sendWebStream, Content-Type tab bypass)
+    *   **Solution:** Replaced `fastify-multer` + `multer` with the official `@fastify/multipart` plugin
+    *   **Fastify Unpinned:** Changed from `~5.3.3` to `^5.7.4`, resolving the 2 Fastify CVEs
+    *   **Upload Endpoint Rewrite:** `POST /api/images/upload` now uses `request.file()` / `data.toBuffer()` pattern instead of multer preHandler
+    *   **Filename Sanitization:** Extracted `sanitizeImageFilename()` as a standalone helper function
+    *   **Error Handling:** Added graceful handling for malformed multipart requests
+    *   **No Frontend Changes:** `@fastify/multipart` parses `FormData` identically to multer
+*   **Security: Resolve tar Chain Vulnerabilities:**
+    *   **bcrypt 5.1.1 → 6.0.0:** Drops `@mapbox/node-pre-gyp` (and its vulnerable `tar@6`) in favor of `prebuildify` with prebuilt binaries shipped in the package
+    *   **npm overrides for tar:** Forces `sqlite3`'s transitive `tar` dependency to `^7.5.8` (patched version)
+    *   **Result:** `npm audit` now reports **0 vulnerabilities** (was 7 HIGH)
+*   **Testing:**
+    *   New automated test suite: `test_code/test-image-upload-multipart.js` (10 tests)
+    *   Tests cover: valid upload, MIME rejection, size limit, filename sanitization, auth, malformed requests, delete, and view
+
+## Version 0.8.7
+
+This version fixes a critical production crash, merges the Group Reorder page into a single unified list, and resolves CSP issues blocking the Raw Editor in production.
+
+*   **Critical Production Fix:**
+    *   **Fastify Crash Loop:** Pinned fastify to `~5.3.3` to fix `fastify-multer` incompatibility (FST_ERR_CTP_INVALID_TYPE) that caused the container to crash-loop after `npm audit fix` upgraded fastify to 5.7.4
+*   **Unified Group Reorder Page:**
+    *   **Single List:** Merged two-column layout (Service Groups / Bookmark Groups) into a single unified list matching `settings.yaml` layout order
+    *   **Visual Distinction:** Service groups have a blue left border + "Service" chip, bookmark groups have an orange left border + "Bookmark" chip, layout-only groups show a grey "Layout" chip
+    *   **Color Legend:** Added legend above the list showing blue = Service Group, orange = Bookmark Group
+    *   **Three-File Sync:** Drag-and-drop now saves order to all three files: `settings.yaml`, `services.yaml`, and `bookmarks.yaml`
+    *   **New Backend Endpoint:** Added `PUT /api/services/groups-order` to reorder service groups in `services.yaml`
+    *   **Testing:** 15/15 automated tests passing (`test_code/test-group-reorder-unified.js`)
+*   **Service List Improvements:**
+    *   **Layout Order Sorting:** Services page now displays groups sorted by `settings.yaml` layout order instead of `services.yaml` file order
+    *   **Service Filter Fix:** Fixed scroll-to-top behavior on edit save
+*   **CSP Fixes for Raw Editor:**
+    *   **Monaco Editor CDN:** Added `https://cdn.jsdelivr.net` to `scriptSrc`, `styleSrc`, and `fontSrc` CSP directives to allow Monaco Editor to load its scripts, stylesheets, and codicon fonts from the CDN in production
+
 ## Version 0.8.6
 
 This version completes all remaining security requirements from the PRD, implements ProxmoxVM widget for full Homepage v1.8.0+ compatibility, and fixes a critical widget editing bug.

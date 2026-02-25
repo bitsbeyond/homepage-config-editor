@@ -18,7 +18,7 @@ const bcrypt = require('bcrypt');
 const fastifyJwt = require('@fastify/jwt');
 const yaml = require('js-yaml'); // Import js-yaml library
 const dotenv = require('dotenv'); // Import dotenv
-const multer = require('fastify-multer'); // Use multer from fastify-multer
+const multipart = require('@fastify/multipart');
 const fastifyHelmet = require('@fastify/helmet'); // Corrected import
 // Removed Git-related imports
 const {
@@ -89,38 +89,15 @@ const IMAGES_DIR = process.env.EDITOR_DATA_DIR
 
 fastify.log.info(`Images will be stored in: ${IMAGES_DIR}`);
 
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    // Ensure the directory exists before saving. fs.mkdir in start() should handle initial creation.
-    // For robustness, could add a check here too, but typically multer expects the dir to exist.
-    cb(null, IMAGES_DIR);
-  },
-  filename: function (req, file, cb) {
-    // Sanitize original filename to remove problematic characters and keep it relatively simple
-    const sanitizedOriginalName = file.originalname.replace(/[^a-zA-Z0-9_.-]/g, '_');
-    // Ensure filename is not excessively long and doesn't start/end with problematic chars
-    let finalFilename = sanitizedOriginalName.substring(0, 250).replace(/^_+|_+$/g, '');
-    if (!finalFilename) { // Handle cases where sanitization results in an empty name
-        finalFilename = `image-${Date.now()}${path.extname(file.originalname) || '.unknown'}`;
-    }
-    fastify.log.info(`Original filename: "${file.originalname}", Sanitized to: "${finalFilename}"`);
-    cb(null, finalFilename);
+// Sanitize uploaded image filenames to prevent path traversal and problematic characters
+function sanitizeImageFilename(originalName) {
+  let sanitized = originalName.replace(/[^a-zA-Z0-9_.-]/g, '_');
+  sanitized = sanitized.substring(0, 250).replace(/^_+|_+$/g, '');
+  if (!sanitized) {
+    sanitized = `image-${Date.now()}${path.extname(originalName) || '.unknown'}`;
   }
-});
-
-const imageFileFilter = (req, file, cb) => {
-  if (file.mimetype.startsWith('image/')) {
-    cb(null, true);
-  } else {
-    cb(new Error('Not an image! Please upload only images.'), false);
-  }
-};
-
-const upload = multer({
-  storage: storage,
-  fileFilter: imageFileFilter,
-  limits: { fileSize: 5 * 1024 * 1024 } // 5MB limit
-});
+  return sanitized;
+}
 // --- End Image Management Setup ---
 
 // Path to the built frontend assets within the container
@@ -134,15 +111,9 @@ fastify.register(fastifyStatic, {
   wildcard: false, // Prevent @fastify/static from creating its own /* GET and HEAD routes
  });
 
-// Register fastify-multer's contentParser
-fastify.register(multer.contentParser);
-
-// Add a custom 'pass-through' content type parser for 'multipart/form-data'
-// This tells Fastify's default body parser to ignore multipart requests,
-// allowing the multer preHandler (configured by fastify-multer) to handle them.
-fastify.addContentTypeParser('multipart/form-data', (request, payload, done) => {
-  // Pass the payload through; multer (via preHandler) will consume and parse it.
-  done(null, payload);
+// Register @fastify/multipart for file upload handling (replaces fastify-multer)
+fastify.register(multipart, {
+  limits: { fileSize: 5 * 1024 * 1024 } // 5MB limit
 });
  
 // Register JWT plugin with dual token support
@@ -176,11 +147,12 @@ fastify.register(fastifyHelmet, {
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'"], // Required for Vite HMR and React
-      styleSrc: ["'self'", "'unsafe-inline'"],  // Required for MUI emotion CSS-in-JS
+      scriptSrc: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net"], // Required for Vite HMR, React, and Monaco Editor loaded from CDN
+      styleSrc: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net"],  // Required for MUI emotion CSS-in-JS and Monaco Editor CSS from CDN
       imgSrc: ["'self'", "data:", "https:", "http://localhost:*"], // Allow all HTTPS images for CDN icons (homarr-labs, Google, etc.)
       connectSrc: ["'self'", "https://cdn.jsdelivr.net", "http://localhost:*", "ws://localhost:*"], // Allow CDN metadata fetch and WebSocket
-      fontSrc: ["'self'"],
+      workerSrc: ["'self'", "blob:"], // Required for Monaco Editor web workers
+      fontSrc: ["'self'", "https://cdn.jsdelivr.net"],  // Monaco Editor loads codicon fonts from CDN
       objectSrc: ["'none'"],
       frameAncestors: ["'none'"], // Prevents clickjacking (equivalent to X-Frame-Options: DENY)
     },
@@ -1044,19 +1016,22 @@ fastify.post('/api/services', {
 
     // 2. Update settings.yaml with default layouts for any new groups
     try {
-        const currentSettings = await readSettings(fastify.log) || {}; // Get current settings or default to {}
-        currentSettings.layout = currentSettings.layout || {}; // Ensure layout object exists
+        const currentSettings = await readSettings(fastify.log) || {};
+        // readSettings returns layout as an array of {name, header, style, columns}
+        if (!Array.isArray(currentSettings.layout)) {
+            currentSettings.layout = [];
+        }
         let settingsModified = false;
         const defaultLayout = { header: true, style: 'row', columns: 4 };
+        const existingGroupNames = new Set(currentSettings.layout.map(entry => entry.name));
 
-        // Extract group names from the data just written
         if (Array.isArray(newServicesData)) {
             newServicesData.forEach(group => {
                 if (typeof group === 'object' && group !== null) {
                     const groupName = Object.keys(group)[0];
-                    // If group exists and doesn't have a layout entry yet, add default
-                    if (groupName && !(groupName in currentSettings.layout)) {
-                        currentSettings.layout[groupName] = { ...defaultLayout }; // Add default layout
+                    if (groupName && !existingGroupNames.has(groupName)) {
+                        currentSettings.layout.push({ name: groupName, ...defaultLayout });
+                        existingGroupNames.add(groupName);
                         settingsModified = true;
                         fastify.log.info(`Adding default layout settings for new service group: ${groupName}`);
                     }
@@ -1064,11 +1039,9 @@ fastify.post('/api/services', {
             });
         }
 
-        // If defaults were added, write back the settings file
         if (settingsModified) {
-            await writeSettings(currentSettings, fastify.log); // writeSettings no longer takes user details
+            await writeSettings(currentSettings, fastify.log);
             fastify.log.info(`Settings configuration updated with default layouts for new service groups by user ${userEmail}`);
-            // Commit settings.yaml change
             try {
                 await commitFile(settingsFilename, userEmail, userName, `Update ${settingsFilename} with default layouts for new service groups`);
             } catch (gitError) {
@@ -1076,8 +1049,6 @@ fastify.post('/api/services', {
             }
         }
     } catch (settingsError) {
-        // Log the error but don't fail the primary request, as services were saved.
-        // The user can fix settings manually if needed.
         fastify.log.error(`Error updating settings with default layouts after saving services:`, settingsError);
     }
 
@@ -1459,19 +1430,21 @@ fastify.post('/api/bookmarks', {
 
     // 2. Update settings.yaml with default layouts for any new groups
     try {
-        const currentSettings = await readSettings(fastify.log) || {}; // Get current settings or default to {}
-        currentSettings.layout = currentSettings.layout || {}; // Ensure layout object exists
+        const currentSettings = await readSettings(fastify.log) || {};
+        if (!Array.isArray(currentSettings.layout)) {
+            currentSettings.layout = [];
+        }
         let settingsModified = false;
-        const defaultLayout = { header: true, style: 'row', columns: 4 }; // Default layout
+        const defaultLayout = { header: true, style: 'row', columns: 4 };
+        const existingGroupNames = new Set(currentSettings.layout.map(entry => entry.name));
 
-        // Extract group names from the data just written
         if (Array.isArray(newBookmarksData)) {
             newBookmarksData.forEach(group => {
                 if (typeof group === 'object' && group !== null) {
                     const groupName = Object.keys(group)[0];
-                    // If group exists and doesn't have a layout entry yet, add default
-                    if (groupName && !(groupName in currentSettings.layout)) {
-                        currentSettings.layout[groupName] = { ...defaultLayout }; // Add default layout
+                    if (groupName && !existingGroupNames.has(groupName)) {
+                        currentSettings.layout.push({ name: groupName, ...defaultLayout });
+                        existingGroupNames.add(groupName);
                         settingsModified = true;
                         fastify.log.info(`Adding default layout settings for new bookmark group: ${groupName}`);
                     }
@@ -1479,11 +1452,9 @@ fastify.post('/api/bookmarks', {
             });
         }
 
-        // If defaults were added, write back the settings file
         if (settingsModified) {
-            await writeSettings(currentSettings, fastify.log); // writeSettings no longer takes user details
+            await writeSettings(currentSettings, fastify.log);
             fastify.log.info(`Settings configuration updated with default layouts for new bookmark groups by user ${userEmail}`);
-            // Commit settings.yaml change
             try {
                 await commitFile(settingsFilename, userEmail, userName, `Update ${settingsFilename} with default layouts for new bookmark groups`);
             } catch (gitError) {
@@ -1669,6 +1640,94 @@ fastify.put('/api/bookmarks/groups-order', {
       reply.code(500).send({ error: `Failed to update ${bookmarksFilename}.` });
     } else {
       reply.code(500).send({ error: 'An unexpected error occurred while reordering bookmark groups.' });
+    }
+  }
+});
+
+
+/**
+ * PUT /api/services/groups-order
+ * Reorders the service groups in services.yaml to match the layout order.
+ * Requires authentication.
+ * Expects { orderedGroupNames: ["Group B", "Group A", ...] } in the request body.
+ */
+fastify.put('/api/services/groups-order', {
+  preHandler: [verifyAuth]
+}, async (request, reply) => {
+  const { orderedGroupNames } = request.body;
+
+  if (!Array.isArray(orderedGroupNames) || !orderedGroupNames.every(name => typeof name === 'string')) {
+    fastify.log.warn('Invalid data format for PUT /api/services/groups-order. Expected { orderedGroupNames: ["...", ...] }.');
+    return reply.code(400).send({ error: 'Invalid data format. Expected an array of group names.' });
+  }
+
+  try {
+    const userEmail = request.user.email;
+    const userName = userEmail;
+    const servicesFilename = 'services.yaml';
+
+    const currentServicesData = await readConfigFile('services', fastify.log);
+
+    if (!Array.isArray(currentServicesData)) {
+      fastify.log.error(`Cannot reorder groups: ${servicesFilename} not found or is not a valid array.`);
+      return reply.code(404).send({ error: `${servicesFilename} not found or invalid.` });
+    }
+
+    const reorderedServicesData = [];
+    const existingGroupsMap = new Map();
+    currentServicesData.forEach(groupObject => {
+      if (typeof groupObject === 'object' && groupObject !== null) {
+        const groupName = Object.keys(groupObject)[0];
+        if (groupName) {
+          existingGroupsMap.set(groupName, groupObject);
+        }
+      }
+    });
+
+    orderedGroupNames.forEach(groupName => {
+      if (existingGroupsMap.has(groupName)) {
+        reorderedServicesData.push(existingGroupsMap.get(groupName));
+        existingGroupsMap.delete(groupName);
+      } else {
+        fastify.log.warn(`Group "${groupName}" provided in order list but not found in ${servicesFilename}. It will be ignored.`);
+      }
+    });
+
+    // Append any groups not in the ordered list to preserve them
+    existingGroupsMap.forEach(groupObject => {
+      const groupName = Object.keys(groupObject)[0];
+      fastify.log.warn(`Group "${groupName}" from ${servicesFilename} was not in the ordered list and will be appended.`);
+      reorderedServicesData.push(groupObject);
+    });
+
+    const validationResult = validateServicesData(reorderedServicesData, fastify.log);
+    if (!validationResult.isValid) {
+      fastify.log.warn('Reordered services data failed schema validation.');
+      const errorMessages = validationResult.errors.map(err => `${err.instancePath || '/'} ${err.message}`).join('; ');
+      return reply.code(400).send({
+        error: 'Reordered data failed schema validation.',
+        details: errorMessages,
+        rawErrors: validationResult.errors
+      });
+    }
+
+    await writeConfigFile('services', reorderedServicesData, fastify.log);
+    fastify.log.info(`Successfully reordered groups in ${servicesFilename} by user ${userEmail}`);
+
+    try {
+      await commitFile(servicesFilename, userEmail, userName, 'Reorder service groups');
+    } catch (gitError) {
+      fastify.log.error(`Git commit failed for ${servicesFilename} after reordering groups:`, gitError);
+    }
+
+    reply.send({ message: 'Service groups reordered successfully.' });
+
+  } catch (error) {
+    fastify.log.error(`Error reordering service groups for user ${request.user.email}:`, error);
+    if (error.message.includes('Failed to write') || error.message.includes('Failed to read')) {
+      reply.code(500).send({ error: `Failed to update services.yaml.` });
+    } else {
+      reply.code(500).send({ error: 'An unexpected error occurred while reordering service groups.' });
     }
   }
 });
@@ -2253,51 +2312,46 @@ fastify.get('/api/images/view/:filename', async (request, reply) => {
 
 /**
  * POST /api/images/upload
- * Uploads a new image.
- * Requires authentication. Uses multer for file handling.
+ * Uploads a new image. Uses @fastify/multipart for file handling.
+ * Requires authentication.
  */
-fastify.post(
-  '/api/images/upload',
-  {
-    // Standard preHandler for authentication, then multer's preHandler
-    preHandler: [verifyAuth, upload.single('imageFile')]
-  },
-  async (request, reply) => {
-    // request.fileValidationError is a convention for passing errors from fileFilter
-    // when cb(new Error(...)) is called in the filter.
-    // Multer itself might also attach an error to the request or throw.
-    // Fastify-multer should ideally translate these into Fastify errors.
-
-    // If multer's fileFilter calls cb(new Error('...'), false),
-    // the error might not be automatically converted to a response by fastify-multer.
-    // We check request.fileValidationError which we could set in a custom error handler for multer if needed,
-    // or rely on multer throwing an error that fastify's general error handler catches.
-    // For now, let's assume if fileFilter passes an error, it might be on request.fileValidationError or caught by Fastify.
-
-    if (request.fileValidationError) { // Check if fileFilter passed an error
-        fastify.log.warn(`Image upload validation error (from fileFilter): ${request.fileValidationError.message} by user ${request.user.email}`);
-        return reply.code(400).send({ error: request.fileValidationError.message });
-    }
-    
-    // If preHandler (upload.single) completed without error but no file is present
-    if (!request.file) {
-      fastify.log.warn(`Image upload attempt by ${request.user.email} - no file present after multer preHandler. This could mean the file was rejected by a filter without an explicit error being propagated, or no file was sent.`);
-      // Check if a response has already been sent (e.g., by a multer error handler)
-      if (!reply.sent) {
-        return reply.code(400).send({ error: 'No file uploaded or file rejected by filter.' });
-      }
-      return; // Avoid sending multiple responses
-    }
-
-    const uploadedFile = request.file;
-    fastify.log.info(`Image uploaded: ${uploadedFile.filename} by user ${request.user.email}`);
-    reply.send({
-      message: 'Image uploaded successfully.',
-      filename: uploadedFile.filename,
-      url: `/api/images/view/${encodeURIComponent(uploadedFile.filename)}`
-    });
+fastify.post('/api/images/upload', { preHandler: [verifyAuth] }, async (request, reply) => {
+  let data;
+  try {
+    data = await request.file();
+  } catch (err) {
+    fastify.log.warn(`Image upload parse error: ${err.message}`);
+    return reply.code(400).send({ error: 'Invalid upload request.' });
   }
-);
+
+  if (!data) {
+    return reply.code(400).send({ error: 'No file uploaded.' });
+  }
+
+  // Validate MIME type
+  if (!data.mimetype.startsWith('image/')) {
+    return reply.code(400).send({ error: 'Not an image! Please upload only images.' });
+  }
+
+  // Read file into buffer and check if it was truncated (size limit exceeded)
+  const buffer = await data.toBuffer();
+  if (data.file.truncated) {
+    return reply.code(413).send({ error: 'File too large. Maximum size is 5MB.' });
+  }
+
+  const sanitizedFilename = sanitizeImageFilename(data.filename);
+  fastify.log.info(`Original filename: "${data.filename}", Sanitized to: "${sanitizedFilename}"`);
+
+  const filePath = path.join(IMAGES_DIR, sanitizedFilename);
+  await fs.writeFile(filePath, buffer);
+
+  fastify.log.info(`Image uploaded: ${sanitizedFilename} by user ${request.user.email}`);
+  reply.send({
+    message: 'Image uploaded successfully.',
+    filename: sanitizedFilename,
+    url: `/api/images/view/${encodeURIComponent(sanitizedFilename)}`
+  });
+});
 
 
 /**
