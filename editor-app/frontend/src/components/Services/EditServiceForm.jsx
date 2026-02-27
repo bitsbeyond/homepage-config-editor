@@ -9,10 +9,10 @@ import { apiRequest } from '../../utils/api';
 // List of available service widget types (copied from AddServiceForm)
 // TODO: Keep this list updated as new widget components are added
 const serviceWidgetTypes = [
-    'adguard-home', 'apcups', 'argocd', 'atsumeru', 'audiobookshelf', 'authentik', 'autobrr',
-    'azuredevops', 'backrest', 'bazarr', 'beszel', 'caddy', 'calibre-web', 'changedetectionio',
+    'adguard-home', 'apcups', 'arcane', 'argocd', 'atsumeru', 'audiobookshelf', 'authentik', 'autobrr',
+    'azuredevops', 'backrest', 'bazarr', 'beszel', 'booklore', 'caddy', 'calibre-web', 'changedetectionio',
     'channelsdvrserver', 'checkmk', 'cloudflared', 'coin-market-cap', 'crowdsec', 'customapi', 'deluge',
-    'develancacheui', 'diskstation', 'downloadstation', 'emby', 'esphome', 'evcc', 'filebrowser', 'fileflows',
+    'develancacheui', 'dispatcharr', 'diskstation', 'dockhand', 'downloadstation', 'emby', 'esphome', 'evcc', 'filebrowser', 'fileflows',
     'firefly', 'flood', 'freshrss', 'frigate', 'fritzbox', 'gamedig', 'gatus', 'ghostfolio',
     'gitea', 'gitlab', 'glances', 'gluetun', 'gotify', 'grafana', 'hdhomerun', 'headscale',
     'healthchecks', 'homeassistant', 'homebox', 'homebridge', 'iframe', 'immich', 'jackett',
@@ -178,6 +178,11 @@ const widgetComponentLoaders = {
     'whatsupdocker': lazy(() => import('../ServiceWidgets/WhatsupdockerWidgetFields.jsx')), // Added whatsupdocker
     'xteve': lazy(() => import('../ServiceWidgets/XteveWidgetFields.jsx')), // Added xteve
     'zabbix': lazy(() => import('../ServiceWidgets/ZabbixWidgetFields.jsx')), // Added zabbix
+    // New widgets added for Homepage v1.10.1
+    'arcane': lazy(() => import('../ServiceWidgets/ArcaneWidgetFields.jsx')),
+    'booklore': lazy(() => import('../ServiceWidgets/BookloreWidgetFields.jsx')),
+    'dispatcharr': lazy(() => import('../ServiceWidgets/DispatcharrWidgetFields.jsx')),
+    'dockhand': lazy(() => import('../ServiceWidgets/DockhandWidgetFields.jsx')),
     // New widgets added for Homepage v1.7.0
     'backrest': lazy(() => import('../ServiceWidgets/BackrestWidgetFields.jsx')),
     'checkmk': lazy(() => import('../ServiceWidgets/CheckmkWidgetFields.jsx')),

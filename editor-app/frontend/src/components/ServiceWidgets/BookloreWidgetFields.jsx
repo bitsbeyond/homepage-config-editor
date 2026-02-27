@@ -2,82 +2,58 @@ import React, { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import TextField from '@mui/material/TextField';
 import Box from '@mui/material/Box';
-import FormControlLabel from '@mui/material/FormControlLabel';
-import Switch from '@mui/material/Switch';
 import EnvVarAutocompleteInput from '../Common/EnvVarAutocompleteInput';
 
-function CrowdsecWidgetFields({ initialData, onChange: parentOnChange }) {
-  // State for each field
+function BookloreWidgetFields({ initialData, onChange: parentOnChange }) {
   const [url, setUrl] = useState(initialData?.url || '');
   const [username, setUsername] = useState(initialData?.username || '');
   const [password, setPassword] = useState(initialData?.password || '');
-  const [limit24h, setLimit24h] = useState(initialData?.limit24h || false);
   const [fieldErrors, setFieldErrors] = useState({});
 
-  // Effect to update local state if initialData changes (e.g., when editing)
   useEffect(() => {
     if (initialData) {
       setUrl(initialData.url || '');
       setUsername(initialData.username || '');
       setPassword(initialData.password || '');
-      setLimit24h(initialData.limit24h || false);
     } else {
       setUrl('');
       setUsername('');
       setPassword('');
-      setLimit24h(false);
     }
   }, [initialData]);
 
-  // Effect to call parent onChange with validation status whenever local state changes
   useEffect(() => {
     const currentWidgetData = {
-      type: 'crowdsec',
+      type: 'booklore',
       url: url || undefined,
       username: username || undefined,
       password: password || undefined,
-      limit24h: limit24h || undefined,
     };
 
     const errors = {};
     if (!url?.trim()) {
-      errors.url = 'CrowdSec LAPI URL is required.';
+      errors.url = 'Booklore URL is required.';
     }
     if (!username?.trim()) {
-      errors.username = 'Machine ID / Username is required.';
+      errors.username = 'Username is required.';
     }
     if (!password?.trim()) {
       errors.password = 'Password is required.';
     }
     setFieldErrors(errors);
 
-    // Clean up undefined fields from currentWidgetData before sending to parent
-    const dataForParent = { type: 'crowdsec' };
+    const dataForParent = { type: 'booklore' };
     Object.keys(currentWidgetData).forEach(k => {
       if (k !== 'type' && currentWidgetData[k] !== undefined) {
         dataForParent[k] = currentWidgetData[k];
       }
     });
-    // Ensure 'type' is always present
-    if (Object.keys(dataForParent).length === 0) {
-        dataForParent.type = 'crowdsec';
-    }
-
 
     parentOnChange(dataForParent, errors);
-  }, [url, username, password, limit24h, parentOnChange]);
+  }, [url, username, password, parentOnChange]);
 
-  // Handle changes for standard TextField (URL)
-  const handleUrlChange = (event) => {
-    setUrl(event.target.value);
-  };
-
-  // Handle changes for EnvVarAutocompleteInput (Username, Password)
-  const handleAutocompleteChange = (setter) => (event) => {
-      // EnvVarAutocompleteInput passes { target: { name, value } }
-      setter(event.target.value);
-  };
-
+  const handleUrlChange = (event) => setUrl(event.target.value);
+  const handleAutocompleteChange = (setter) => (event) => setter(event.target.value);
 
   return (
     <Box sx={{ mt: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
@@ -85,21 +61,21 @@ function CrowdsecWidgetFields({ initialData, onChange: parentOnChange }) {
         required
         fullWidth
         name="url"
-        label="CrowdSec LAPI URL"
+        label="Booklore URL"
         value={url}
         onChange={handleUrlChange}
         error={!!fieldErrors.url}
-        helperText={fieldErrors.url || "The URL of your CrowdSec Local API (e.g., http://192.168.1.104:8080)."}
+        helperText={fieldErrors.url || "The URL of your Booklore instance (e.g., http://booklore.host:8080)."}
       />
       <EnvVarAutocompleteInput
         required
         fullWidth
         name="username"
-        label="Machine ID / Username"
+        label="Username"
         value={username}
         onChange={handleAutocompleteChange(setUsername)}
         error={!!fieldErrors.username}
-        helperText={fieldErrors.username || "Usually 'localhost' or the machine_id from credentials file."}
+        helperText={fieldErrors.username || "Booklore username. Can use {{HOMEPAGE_VAR_...}}"}
       />
       <EnvVarAutocompleteInput
         required
@@ -110,35 +86,24 @@ function CrowdsecWidgetFields({ initialData, onChange: parentOnChange }) {
         value={password}
         onChange={handleAutocompleteChange(setPassword)}
         error={!!fieldErrors.password}
-        helperText={fieldErrors.password || "Password from local_api_credentials.yaml."}
-      />
-      <FormControlLabel
-        control={
-          <Switch
-            checked={limit24h}
-            onChange={(e) => setLimit24h(e.target.checked)}
-            name="limit24h"
-          />
-        }
-        label="Limit Alerts to Last 24 Hours"
+        helperText={fieldErrors.password || "Booklore password. Can use {{HOMEPAGE_VAR_...}}"}
       />
     </Box>
   );
 }
 
-CrowdsecWidgetFields.propTypes = {
+BookloreWidgetFields.propTypes = {
   initialData: PropTypes.shape({
     type: PropTypes.string,
     url: PropTypes.string,
     username: PropTypes.string,
     password: PropTypes.string,
-    limit24h: PropTypes.bool,
   }),
   onChange: PropTypes.func.isRequired,
 };
 
-CrowdsecWidgetFields.defaultProps = {
+BookloreWidgetFields.defaultProps = {
   initialData: null,
 };
 
-export default CrowdsecWidgetFields;
+export default BookloreWidgetFields;

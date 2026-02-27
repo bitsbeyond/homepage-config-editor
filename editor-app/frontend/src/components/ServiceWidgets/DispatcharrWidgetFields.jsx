@@ -3,50 +3,43 @@ import PropTypes from 'prop-types';
 import { TextField, FormControlLabel, Switch, Box, Typography } from '@mui/material';
 import EnvVarAutocompleteInput from '../Common/EnvVarAutocompleteInput';
 
-function FrigateWidgetFields({ initialData, onChange: parentOnChange }) {
-  // Individual state for each field
+function DispatcharrWidgetFields({ initialData, onChange: parentOnChange }) {
   const [url, setUrl] = useState(initialData?.url || '');
   const [username, setUsername] = useState(initialData?.username || '');
   const [password, setPassword] = useState(initialData?.password || '');
-  const [enableRecentEvents, setEnableRecentEvents] = useState(initialData?.enableRecentEvents || false);
+  const [enableActiveStreams, setEnableActiveStreams] = useState(initialData?.enableActiveStreams || false);
   const [fieldErrors, setFieldErrors] = useState({});
 
-  // Effect to update local state if initialData changes
   useEffect(() => {
     if (initialData) {
-      const newUrl = initialData.url || '';
-      const newEnableRecentEvents = initialData.enableRecentEvents || false;
-
-      if (newUrl !== url) setUrl(newUrl);
+      setUrl(initialData.url || '');
       setUsername(initialData.username || '');
       setPassword(initialData.password || '');
-      if (newEnableRecentEvents !== enableRecentEvents) setEnableRecentEvents(newEnableRecentEvents);
+      setEnableActiveStreams(initialData.enableActiveStreams || false);
     } else {
       setUrl('');
       setUsername('');
       setPassword('');
-      setEnableRecentEvents(false);
+      setEnableActiveStreams(false);
     }
   }, [initialData]);
 
-  // Effect to call parent onChange with validation status whenever local state changes
   useEffect(() => {
     const currentWidgetData = {
-      type: 'frigate',
+      type: 'dispatcharr',
       url: url || undefined,
       username: username || undefined,
       password: password || undefined,
-      enableRecentEvents: enableRecentEvents === false ? undefined : enableRecentEvents,
+      enableActiveStreams: enableActiveStreams === false ? undefined : enableActiveStreams,
     };
 
     const errors = {};
-    if (!url?.trim()) {
-      errors.url = 'URL is required.';
-    }
+    if (!url?.trim()) errors.url = 'URL is required.';
+    if (!username?.trim()) errors.username = 'Username is required.';
+    if (!password?.trim()) errors.password = 'Password is required.';
     setFieldErrors(errors);
 
-    // Clean up undefined fields from currentWidgetData before sending to parent
-    const dataForParent = { type: 'frigate' };
+    const dataForParent = { type: 'dispatcharr' };
     Object.keys(currentWidgetData).forEach(k => {
       if (k !== 'type' && currentWidgetData[k] !== undefined) {
         dataForParent[k] = currentWidgetData[k];
@@ -54,72 +47,74 @@ function FrigateWidgetFields({ initialData, onChange: parentOnChange }) {
     });
 
     parentOnChange(dataForParent, errors);
-  }, [url, username, password, enableRecentEvents, parentOnChange]);
+  }, [url, username, password, enableActiveStreams, parentOnChange]);
 
-  // Handle changes for individual fields
-  const handleUrlChange = (event) => setUrl(event.target.value);
-  const handleEnableRecentEventsChange = (event) => setEnableRecentEvents(event.target.checked);
+  const handleAutocompleteChange = (setter) => (event) => setter(event.target.value);
 
   return (
     <Box sx={{ mt: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
       <TextField
-        label="URL"
+        label="Dispatcharr URL"
         name="url"
         value={url}
-        onChange={handleUrlChange}
+        onChange={(e) => setUrl(e.target.value)}
         fullWidth
         required
         type="url"
         error={!!fieldErrors.url}
-        helperText={fieldErrors.url || "e.g., http://frigate.host.or.ip:port"}
+        helperText={fieldErrors.url || "e.g., http://dispatcharr.host:port"}
       />
       <EnvVarAutocompleteInput
-        label="Username (Optional)"
+        label="Username"
         name="username"
         value={username}
-        onChange={(e) => setUsername(e.target.value)}
+        onChange={handleAutocompleteChange(setUsername)}
         fullWidth
-        helperText="Optional. Frigate username if authentication is enabled. Can use {{HOMEPAGE_VAR_...}}"
+        required
+        error={!!fieldErrors.username}
+        helperText={fieldErrors.username || "Dispatcharr username. Can use {{HOMEPAGE_VAR_...}}"}
       />
       <EnvVarAutocompleteInput
-        label="Password (Optional)"
+        label="Password"
         name="password"
         value={password}
-        onChange={(e) => setPassword(e.target.value)}
+        onChange={handleAutocompleteChange(setPassword)}
         fullWidth
+        required
         type="password"
-        helperText="Optional. Frigate password if authentication is enabled. Can use {{HOMEPAGE_VAR_...}}"
+        error={!!fieldErrors.password}
+        helperText={fieldErrors.password || "Dispatcharr password. Can use {{HOMEPAGE_VAR_...}}"}
       />
       <Box sx={{ mt: 1 }}>
         <Typography variant="subtitle2" gutterBottom>Optional Settings</Typography>
         <FormControlLabel
           control={
             <Switch
-              checked={enableRecentEvents}
-              onChange={handleEnableRecentEventsChange}
-              name="enableRecentEvents"
+              checked={enableActiveStreams}
+              onChange={(e) => setEnableActiveStreams(e.target.checked)}
+              name="enableActiveStreams"
             />
           }
-          label="Enable Recent Events Listing"
+          label="Enable Active Streams Display"
         />
       </Box>
     </Box>
   );
 }
 
-FrigateWidgetFields.propTypes = {
+DispatcharrWidgetFields.propTypes = {
   initialData: PropTypes.shape({
     type: PropTypes.string,
     url: PropTypes.string,
     username: PropTypes.string,
     password: PropTypes.string,
-    enableRecentEvents: PropTypes.bool,
+    enableActiveStreams: PropTypes.bool,
   }),
   onChange: PropTypes.func.isRequired,
 };
 
-FrigateWidgetFields.defaultProps = {
+DispatcharrWidgetFields.defaultProps = {
   initialData: null,
 };
 
-export default FrigateWidgetFields;
+export default DispatcharrWidgetFields;

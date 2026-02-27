@@ -109,6 +109,16 @@
         "type": {
           "type": "string",
           "description": "The type of the widget (e.g., 'plex', 'sonarr')"
+        },
+        "headers": {
+          "type": "object",
+          "description": "Custom HTTP headers for widget API requests",
+          "additionalProperties": { "type": "string" }
+        },
+        "highlight": {
+          "type": "object",
+          "description": "Custom block highlight configuration for this widget",
+          "additionalProperties": true
         }
       },
       "required": [

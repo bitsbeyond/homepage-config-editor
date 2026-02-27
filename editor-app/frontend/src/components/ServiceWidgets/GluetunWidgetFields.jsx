@@ -11,6 +11,9 @@ import {
   Typography,
   Box,
   Link,
+  InputLabel,
+  Select,
+  MenuItem,
 } from '@mui/material';
 import EnvVarAutocompleteInput from '../Common/EnvVarAutocompleteInput'; // Added import
 
@@ -23,6 +26,7 @@ const allowedFields = [
 function GluetunWidgetFields({ initialData, onChange: parentOnChange }) {
   const [url, setUrl] = useState(initialData?.url || '');
   const [apiKey, setApiKey] = useState(initialData?.key || '');
+  const [version, setVersion] = useState(initialData?.version ? String(initialData.version) : '1');
   const [selectedFields, setSelectedFields] = useState(initialData?.fields || []);
 
   useEffect(() => {
@@ -30,8 +34,13 @@ function GluetunWidgetFields({ initialData, onChange: parentOnChange }) {
     if (!initialData) {
         setUrl('');
         setApiKey('');
+        setVersion('1');
         setSelectedFields([]);
     } else {
+        if (initialData.version !== undefined) {
+            const newVersion = String(initialData.version);
+            if (newVersion !== version) setVersion(newVersion);
+        }
         if (initialData.url !== undefined && initialData.url !== url) {
             setUrl(initialData.url || '');
         }
@@ -54,6 +63,7 @@ function GluetunWidgetFields({ initialData, onChange: parentOnChange }) {
       type: 'gluetun',
       url: url || undefined,
       key: apiKey || undefined,
+      version: version !== '1' ? parseInt(version, 10) : undefined,
       fields: selectedFields.length > 0 ? selectedFields : undefined,
     };
 
@@ -78,7 +88,7 @@ function GluetunWidgetFields({ initialData, onChange: parentOnChange }) {
     dataForParent.type = 'gluetun';
 
     parentOnChange(dataForParent, validationErrors);
-  }, [url, apiKey, selectedFields, parentOnChange]);
+  }, [url, apiKey, version, selectedFields, parentOnChange]);
 
   const handleUrlChange = (event) => setUrl(event.target.value);
   const handleApiKeyChange = (event) => setApiKey(event.target.value);
@@ -108,6 +118,21 @@ function GluetunWidgetFields({ initialData, onChange: parentOnChange }) {
         helperText={!url?.trim() ? 'URL is required.' : "e.g., http://gluetun.host:8000 (Requires HTTP control server enabled)"}
         error={!url?.trim()}
       />
+      <FormControl fullWidth>
+        <InputLabel id="gluetun-version-label">Widget Version</InputLabel>
+        <Select
+          labelId="gluetun-version-label"
+          id="gluetun-version-select"
+          name="version"
+          value={version}
+          label="Widget Version"
+          onChange={(e) => setVersion(e.target.value)}
+        >
+          <MenuItem value="1">v1 (&lt; 3.40.1, Default)</MenuItem>
+          <MenuItem value="2">v2 (&gt;= 3.40.1)</MenuItem>
+        </Select>
+        <FormHelperText>Use v2 for Gluetun 3.40.1 and newer.</FormHelperText>
+      </FormControl>
       <EnvVarAutocompleteInput
         label="API Key (key)"
         name="key"
@@ -153,6 +178,7 @@ GluetunWidgetFields.propTypes = {
     type: PropTypes.string,
     url: PropTypes.string,
     key: PropTypes.string,
+    version: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
     fields: PropTypes.arrayOf(PropTypes.string),
   }),
   onChange: PropTypes.func.isRequired,

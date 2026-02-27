@@ -1,21 +1,24 @@
 import React, { useState, useEffect } from 'react';
-import { TextField, Box } from '@mui/material';
-import EnvVarAutocompleteInput from '../Common/EnvVarAutocompleteInput'; // Added import
+import PropTypes from 'prop-types';
+import { TextField, Box, FormControl, InputLabel, Select, MenuItem, FormHelperText } from '@mui/material';
+import EnvVarAutocompleteInput from '../Common/EnvVarAutocompleteInput';
 
 function AuthentikWidgetFields({ initialData, onChange }) {
-  // State for each field
   const [url, setUrl] = useState(initialData?.url || '');
-  const [apiKey, setApiKey] = useState(initialData?.key || ''); // 'key' in YAML
+  const [apiKey, setApiKey] = useState(initialData?.key || '');
+  const [version, setVersion] = useState(initialData?.version ? String(initialData.version) : '1');
+  const [fieldErrors, setFieldErrors] = useState({});
 
   // Effect to update local state if initialData changes (e.g., when editing)
   useEffect(() => {
     if (initialData) {
       setUrl(initialData.url || '');
       setApiKey(initialData.key || '');
+      setVersion(initialData.version ? String(initialData.version) : '1');
     } else {
-      // Reset to defaults if initialData becomes null (e.g., widget deselected)
       setUrl('');
       setApiKey('');
+      setVersion('1');
     }
   }, [initialData]);
 
@@ -24,7 +27,8 @@ function AuthentikWidgetFields({ initialData, onChange }) {
     const currentWidgetData = {
       type: 'authentik',
       url: url || undefined,
-      key: apiKey || undefined, // Maps to 'key' in YAML
+      key: apiKey || undefined,
+      version: version !== '1' ? parseInt(version, 10) : undefined,
     };
 
     const errors = {};
@@ -34,6 +38,7 @@ function AuthentikWidgetFields({ initialData, onChange }) {
     if (!apiKey?.trim()) {
       errors.key = 'API Token (key) is required.';
     }
+    setFieldErrors(errors);
 
     // Clean up undefined fields from currentWidgetData before sending to parent
     const dataForParent = { type: 'authentik' };
@@ -50,7 +55,7 @@ function AuthentikWidgetFields({ initialData, onChange }) {
 
 
     onChange(dataForParent, errors);
-  }, [url, apiKey, onChange]); // Depend on individual states and onChange
+  }, [url, apiKey, version, onChange]);
 
   // Handle changes for standard TextField (URL)
   const handleUrlChange = (event) => {
@@ -69,25 +74,56 @@ function AuthentikWidgetFields({ initialData, onChange }) {
       <TextField
         label="Authentik URL"
         name="url"
-        value={url} // Use individual state
-        onChange={handleUrlChange} // Use specific handler
+        value={url}
+        onChange={handleUrlChange}
         fullWidth
         required
         type="url"
-        helperText="Base URL of your Authentik instance (e.g., https://auth.example.com)"
+        error={!!fieldErrors.url}
+        helperText={fieldErrors.url || "Base URL of your Authentik instance (e.g., https://auth.example.com)"}
       />
       <EnvVarAutocompleteInput
         label="API Token"
-        name="key" // This 'name' is for the EnvVarAutocompleteInput's own internal use if needed
-        value={apiKey} // Use individual state
-        onChange={handleApiKeyChange} // Use specific handler
+        name="key"
+        value={apiKey}
+        onChange={handleApiKeyChange}
         fullWidth
         required
-        type="password" // Enables visibility toggle
-        helperText="Authentik API Token (Intent: API Token, Permissions: View User, View Event). Can use {{HOMEPAGE_VAR_...}}"
+        type="password"
+        error={!!fieldErrors.key}
+        helperText={fieldErrors.key || "Authentik API Token (Intent: API Token, Permissions: View User, View Event). Can use {{HOMEPAGE_VAR_...}}"}
       />
+      <FormControl fullWidth>
+        <InputLabel id="authentik-version-label">Widget Version</InputLabel>
+        <Select
+          labelId="authentik-version-label"
+          id="authentik-version-select"
+          name="version"
+          value={version}
+          label="Widget Version"
+          onChange={(e) => setVersion(e.target.value)}
+        >
+          <MenuItem value="1">v1 (&lt; 2025.8.0, Default)</MenuItem>
+          <MenuItem value="2">v2 (&gt;= 2025.8.0)</MenuItem>
+        </Select>
+        <FormHelperText>Use v2 for Authentik 2025.8.0 and newer.</FormHelperText>
+      </FormControl>
     </Box>
   );
 }
+
+AuthentikWidgetFields.propTypes = {
+  initialData: PropTypes.shape({
+    type: PropTypes.string,
+    url: PropTypes.string,
+    key: PropTypes.string,
+    version: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+  }),
+  onChange: PropTypes.func.isRequired,
+};
+
+AuthentikWidgetFields.defaultProps = {
+  initialData: null,
+};
 
 export default AuthentikWidgetFields;

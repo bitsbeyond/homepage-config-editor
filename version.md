@@ -2,6 +2,36 @@
 
 This document outlines the key changes and features introduced in each version of the Homepage Editor.
 
+## Version 0.9.0
+
+Upgrades Homepage compatibility from v1.8.0 to v1.10.1. Adds 4 new widgets, version selectors for 6 widgets, field updates for 3 widgets, and new settings options.
+
+*   **Homepage Baseline:** v1.8.0 → v1.10.1
+*   **Widget Count:** 150 → 154 (100% coverage for Homepage v1.10.1)
+*   **4 New Widgets:**
+    *   **Booklore** — Book management (url + username + password)
+    *   **Dockhand** — Docker management (url + auth + optional environment + fields checkbox)
+    *   **Dispatcharr** — Stream management (url + auth + optional enableActiveStreams toggle)
+    *   **Arcane** — Container environment management (url + API key + environment ID + fields checkbox)
+*   **Version Selectors Added (6 widgets):**
+    *   **Jellyfin** — v1 (< 10.12) / v2 (>= 10.12) + new enableMediaControl toggle
+    *   **Gluetun** — v1 (< 3.40.1) / v2 (>= 3.40.1)
+    *   **TrueNAS** — v1 (<= 25.04) / v2 (> 25.04, WebSocket API)
+    *   **NetAlertX** — v1 (< 26.1.17) / v2 (>= 26.1.17)
+    *   **Vikunja** — v1 (< 1.0.0-rc4) / v2 (>= 1.0.0-rc4)
+    *   **Authentik** — v1 (< 2025.8.0) / v2 (>= 2025.8.0) + PropTypes fix
+*   **Widget Field Updates (3 widgets):**
+    *   **Ghostfolio** — Added `net_worth` field option + fixed bug where selected fields were not sent to parent
+    *   **CrowdSec** — Added `limit24h` switch to limit alerts to last 24 hours
+    *   **Frigate** — Added optional `username` and `password` fields for authentication
+*   **Settings Updates:**
+    *   **disableIndexing** — Switch to disable search engine indexing
+    *   **blockHighlights.levels** — Custom CSS classes for good/warn/danger block highlights
+    *   **PWA** — JSON configuration for Progressive Web App icons and shortcuts
+*   **Schema Updates:**
+    *   `settings.schema.json` — Added disableIndexing, pwa, blockHighlights properties
+    *   `services.schema.json` — Added headers and highlight properties to serviceWidget
+
 ## Version 0.8.8
 
 This version resolves all remaining HIGH security vulnerabilities by migrating away from the unmaintained `fastify-multer` package and upgrading key dependencies.

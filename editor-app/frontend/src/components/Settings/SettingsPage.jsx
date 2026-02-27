@@ -557,6 +557,104 @@ function SettingsPage() {
                             {/* No intermediate Grid container was here */}
                         </Grid> {/* Closes Grid item from line 385 */}
 
+                        {/* --- Advanced Settings Section --- */}
+                        <Grid item xs={12}>
+                            <Typography variant="h6" gutterBottom>Advanced Settings</Typography>
+                            <Grid container spacing={2}>
+                                <Grid item xs={12}>
+                                    <FormControlLabel
+                                        control={
+                                            <Switch
+                                                name="disableIndexing"
+                                                checked={settings.disableIndexing || false}
+                                                onChange={(e) => setSettings(prev => ({ ...prev, disableIndexing: e.target.checked }))}
+                                            />
+                                        }
+                                        label="Disable Search Engine Indexing"
+                                    />
+                                </Grid>
+                                <Grid item xs={12}>
+                                    <Typography variant="subtitle2" gutterBottom>Block Highlight Levels</Typography>
+                                    <Typography variant="caption" display="block" color="text.secondary" sx={{ mb: 2 }}>
+                                        Custom CSS classes for widget block highlights. Leave empty for default Homepage styling.
+                                    </Typography>
+                                    <Grid container spacing={2}>
+                                        <Grid item xs={12} sm={4}>
+                                            <TextField
+                                                fullWidth
+                                                label="Good (CSS class)"
+                                                name="good"
+                                                value={settings.blockHighlights?.levels?.good || ''}
+                                                onChange={(e) => setSettings(prev => ({
+                                                    ...prev,
+                                                    blockHighlights: {
+                                                        ...prev.blockHighlights,
+                                                        levels: { ...(prev.blockHighlights?.levels || {}), good: e.target.value }
+                                                    }
+                                                }))}
+                                                variant="outlined"
+                                                helperText="e.g., bg-green-500/50"
+                                            />
+                                        </Grid>
+                                        <Grid item xs={12} sm={4}>
+                                            <TextField
+                                                fullWidth
+                                                label="Warn (CSS class)"
+                                                name="warn"
+                                                value={settings.blockHighlights?.levels?.warn || ''}
+                                                onChange={(e) => setSettings(prev => ({
+                                                    ...prev,
+                                                    blockHighlights: {
+                                                        ...prev.blockHighlights,
+                                                        levels: { ...(prev.blockHighlights?.levels || {}), warn: e.target.value }
+                                                    }
+                                                }))}
+                                                variant="outlined"
+                                                helperText="e.g., bg-yellow-500/50"
+                                            />
+                                        </Grid>
+                                        <Grid item xs={12} sm={4}>
+                                            <TextField
+                                                fullWidth
+                                                label="Danger (CSS class)"
+                                                name="danger"
+                                                value={settings.blockHighlights?.levels?.danger || ''}
+                                                onChange={(e) => setSettings(prev => ({
+                                                    ...prev,
+                                                    blockHighlights: {
+                                                        ...prev.blockHighlights,
+                                                        levels: { ...(prev.blockHighlights?.levels || {}), danger: e.target.value }
+                                                    }
+                                                }))}
+                                                variant="outlined"
+                                                helperText="e.g., bg-red-500/50"
+                                            />
+                                        </Grid>
+                                    </Grid>
+                                </Grid>
+                                <Grid item xs={12}>
+                                    <Typography variant="subtitle2" gutterBottom sx={{ mt: 1 }}>PWA Configuration (JSON)</Typography>
+                                    <TextField
+                                        fullWidth
+                                        multiline
+                                        rows={4}
+                                        label="PWA JSON"
+                                        value={settings.pwa ? JSON.stringify(settings.pwa, null, 2) : ''}
+                                        onChange={(e) => {
+                                            try {
+                                                const parsed = e.target.value.trim() ? JSON.parse(e.target.value) : undefined;
+                                                setSettings(prev => ({ ...prev, pwa: parsed }));
+                                            } catch {
+                                                // Allow invalid JSON while typing
+                                            }
+                                        }}
+                                        variant="outlined"
+                                        helperText='Optional. JSON object with "icons" and/or "shortcuts" arrays for PWA manifest customization.'
+                                    />
+                                </Grid>
+                            </Grid>
+                        </Grid>
+
                         {/* --- Save Button Section --- */}
                         <Grid item xs={12} sx={{ mt: 3, textAlign: 'right' }}>
                             <Button

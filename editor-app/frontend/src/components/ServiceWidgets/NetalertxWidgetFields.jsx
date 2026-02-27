@@ -2,13 +2,19 @@ import React, { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import TextField from '@mui/material/TextField';
 import Box from '@mui/material/Box';
+import FormControl from '@mui/material/FormControl';
+import InputLabel from '@mui/material/InputLabel';
+import Select from '@mui/material/Select';
+import MenuItem from '@mui/material/MenuItem';
+import FormHelperText from '@mui/material/FormHelperText';
 import EnvVarAutocompleteInput from '../Common/EnvVarAutocompleteInput';
 
 function NetalertxWidgetFields({ initialData, onChange: parentOnChange }) {
   // State for each field
   const [url, setUrl] = useState(initialData?.url || '');
   const [key, setKey] = useState(initialData?.key || '');
-  const [fieldErrors, setFieldErrors] = useState({}); // State to hold local error messages
+  const [version, setVersion] = useState(initialData?.version ? String(initialData.version) : '1');
+  const [fieldErrors, setFieldErrors] = useState({});
 
   // Effect to update local state if initialData changes (e.g., when editing)
   useEffect(() => {
@@ -21,10 +27,12 @@ function NetalertxWidgetFields({ initialData, onChange: parentOnChange }) {
       if (newKey !== key) {
         setKey(newKey);
       }
+      const newVersion = initialData.version ? String(initialData.version) : '1';
+      if (newVersion !== version) setVersion(newVersion);
     } else {
-      // Reset to defaults if initialData becomes null (e.g., widget deselected)
       setUrl('');
       setKey('');
+      setVersion('1');
     }
   }, [initialData]);
 
@@ -34,6 +42,7 @@ function NetalertxWidgetFields({ initialData, onChange: parentOnChange }) {
       type: 'netalertx',
       url: url || undefined,
       key: key || undefined,
+      version: version !== '1' ? parseInt(version, 10) : undefined,
     };
 
     const errors = {};
@@ -55,7 +64,7 @@ function NetalertxWidgetFields({ initialData, onChange: parentOnChange }) {
     }
 
     parentOnChange(dataForParent, errors);
-  }, [url, key, parentOnChange]); // Depend on individual states and parentOnChange
+  }, [url, key, version, parentOnChange]);
 
   // Handle changes for standard TextFields (URL)
   const handleUrlChange = (event) => {
@@ -91,6 +100,21 @@ function NetalertxWidgetFields({ initialData, onChange: parentOnChange }) {
         error={!!fieldErrors.key}
         helperText={fieldErrors.key || "Required only if password protection is enabled in NetAlertX. Can be a {{HOMEPAGE_VAR_...}}"}
       />
+      <FormControl fullWidth>
+        <InputLabel id="netalertx-version-label">Widget Version</InputLabel>
+        <Select
+          labelId="netalertx-version-label"
+          id="netalertx-version-select"
+          name="version"
+          value={version}
+          label="Widget Version"
+          onChange={(e) => setVersion(e.target.value)}
+        >
+          <MenuItem value="1">v1 (&lt; 26.1.17, Default)</MenuItem>
+          <MenuItem value="2">v2 (&gt;= 26.1.17)</MenuItem>
+        </Select>
+        <FormHelperText>Use v2 for NetAlertX &gt;= 26.1.17. Use the backend port for v2.</FormHelperText>
+      </FormControl>
     </Box>
   );
 }
@@ -100,6 +124,7 @@ NetalertxWidgetFields.propTypes = {
     type: PropTypes.string,
     url: PropTypes.string,
     key: PropTypes.string,
+    version: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
   }),
   onChange: PropTypes.func.isRequired,
 };

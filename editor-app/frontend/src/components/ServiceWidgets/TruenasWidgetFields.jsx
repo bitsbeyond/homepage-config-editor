@@ -20,6 +20,7 @@ function TruenasWidgetFields({ initialData, onChange: parentOnChange }) {
   const [key, setKey] = useState(initialData?.key || '');
   const [enablePools, setEnablePools] = useState(initialData?.enablePools || false);
   const [nasType, setNasType] = useState(initialData?.nasType || 'scale');
+  const [version, setVersion] = useState(initialData?.version ? String(initialData.version) : '1');
   const [fieldErrors, setFieldErrors] = useState({});
 
   // Effect to update local state if initialData changes (e.g., when editing)
@@ -31,14 +32,15 @@ function TruenasWidgetFields({ initialData, onChange: parentOnChange }) {
       setKey(initialData.key || '');
       setEnablePools(initialData.enablePools || false);
       setNasType(initialData.nasType || 'scale');
+      setVersion(initialData.version ? String(initialData.version) : '1');
     } else {
-      // Reset to defaults if initialData becomes null (e.g., widget deselected)
       setUrl('');
       setUsername('');
       setPassword('');
       setKey('');
       setEnablePools(false);
       setNasType('scale');
+      setVersion('1');
     }
   }, [initialData]);
 
@@ -52,6 +54,7 @@ function TruenasWidgetFields({ initialData, onChange: parentOnChange }) {
       key: key || undefined,
       enablePools: enablePools || undefined,
       nasType: nasType !== 'scale' ? nasType : undefined,
+      version: version !== '1' ? parseInt(version, 10) : undefined,
     };
 
     const errors = {};
@@ -73,7 +76,7 @@ function TruenasWidgetFields({ initialData, onChange: parentOnChange }) {
     }
 
     parentOnChange(dataForParent, errors);
-  }, [url, username, password, key, enablePools, nasType, parentOnChange]);
+  }, [url, username, password, key, enablePools, nasType, version, parentOnChange]);
 
   // Handle changes for standard TextFields
   const handleTextFieldChange = (setter) => (event) => {
@@ -148,6 +151,21 @@ function TruenasWidgetFields({ initialData, onChange: parentOnChange }) {
         </Select>
         <FormHelperText>Required if 'Enable Pools' is checked for TrueNAS Core.</FormHelperText>
       </FormControl>
+      <FormControl fullWidth>
+        <InputLabel id="truenas-version-label">Widget Version</InputLabel>
+        <Select
+          labelId="truenas-version-label"
+          id="truenas-version-select"
+          name="version"
+          value={version}
+          label="Widget Version"
+          onChange={handleTextFieldChange(setVersion)}
+        >
+          <MenuItem value="1">v1 (&lt;= 25.04, Default)</MenuItem>
+          <MenuItem value="2">v2 (&gt; 25.04, WebSocket API)</MenuItem>
+        </Select>
+        <FormHelperText>Use v2 for TrueNAS versions after 25.04 (uses WebSocket API).</FormHelperText>
+      </FormControl>
       <FormControlLabel
         control={<Switch checked={enablePools} onChange={handleSwitchChange(setEnablePools)} name="enablePools" />}
         label="Enable Pool Listing"
@@ -165,6 +183,7 @@ TruenasWidgetFields.propTypes = {
     key: PropTypes.string,
     enablePools: PropTypes.bool,
     nasType: PropTypes.string,
+    version: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
   }),
   onChange: PropTypes.func.isRequired,
 };

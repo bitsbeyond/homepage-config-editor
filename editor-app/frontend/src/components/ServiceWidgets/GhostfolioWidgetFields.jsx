@@ -18,6 +18,7 @@ const allowedFields = [
   "gross_percent_today",
   "gross_percent_1y",
   "gross_percent_max",
+  "net_worth",
 ];
 
 function GhostfolioWidgetFields({ initialData, onChange: parentOnChange }) {
@@ -42,18 +43,10 @@ function GhostfolioWidgetFields({ initialData, onChange: parentOnChange }) {
   useEffect(() => {
     const widgetUpdate = {
       type: 'ghostfolio',
-      url: url,
-      key: apiKey,
+      url: url || undefined,
+      key: apiKey || undefined,
+      fields: selectedFields.length > 0 ? selectedFields : undefined,
     };
-
-    // Revert to the state where selectedFields logic was isolated for stability
-    // This means 'fields' will not be live-updated to the parent,
-    // but should be picked up on save.
-    // if (selectedFields.length > 0) {
-    //   widgetUpdate.fields = selectedFields;
-    // } else {
-    //  delete widgetUpdate.fields; // Or widgetUpdate.fields = undefined;
-    // }
 
     const validationErrors = {};
     if (!url?.trim()) {
@@ -63,12 +56,16 @@ function GhostfolioWidgetFields({ initialData, onChange: parentOnChange }) {
       validationErrors.key = 'Bearer Token (key) is required.';
     }
 
-    if (typeof parentOnChange === 'function') {
-      parentOnChange(widgetUpdate, validationErrors);
-    } else {
-      console.error('GhostfolioWidgetFields: parentOnChange is not a function', parentOnChange);
-    }
-  }, [url, apiKey, /* selectedFields, */ parentOnChange]); // Keep selectedFields out of deps for stability
+    // Clean up undefined fields
+    const dataForParent = { type: 'ghostfolio' };
+    Object.keys(widgetUpdate).forEach(k => {
+      if (k !== 'type' && widgetUpdate[k] !== undefined) {
+        dataForParent[k] = widgetUpdate[k];
+      }
+    });
+
+    parentOnChange(dataForParent, validationErrors);
+  }, [url, apiKey, JSON.stringify(selectedFields), parentOnChange]);
 
   const handleUrlChange = (event) => {
     setUrl(event.target.value);

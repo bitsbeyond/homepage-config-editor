@@ -4,12 +4,18 @@ import TextField from '@mui/material/TextField';
 import Box from '@mui/material/Box';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import Checkbox from '@mui/material/Checkbox';
+import FormControl from '@mui/material/FormControl';
+import InputLabel from '@mui/material/InputLabel';
+import Select from '@mui/material/Select';
+import MenuItem from '@mui/material/MenuItem';
+import FormHelperText from '@mui/material/FormHelperText';
 import EnvVarAutocompleteInput from '../Common/EnvVarAutocompleteInput';
 
 function VikunjaWidgetFields({ initialData, onChange: parentOnChange }) {
   // State for each field
   const [url, setUrl] = useState(initialData?.url || '');
   const [key, setKey] = useState(initialData?.key || '');
+  const [version, setVersion] = useState(initialData?.version ? String(initialData.version) : '1');
   const [enableTaskList, setEnableTaskList] = useState(initialData?.enableTaskList || false);
   const [fieldErrors, setFieldErrors] = useState({});
 
@@ -18,11 +24,12 @@ function VikunjaWidgetFields({ initialData, onChange: parentOnChange }) {
     if (initialData) {
       setUrl(initialData.url || '');
       setKey(initialData.key || '');
+      setVersion(initialData.version ? String(initialData.version) : '1');
       setEnableTaskList(initialData.enableTaskList || false);
     } else {
-      // Reset to defaults if initialData becomes null (e.g., widget deselected)
       setUrl('');
       setKey('');
+      setVersion('1');
       setEnableTaskList(false);
     }
   }, [initialData]);
@@ -33,6 +40,7 @@ function VikunjaWidgetFields({ initialData, onChange: parentOnChange }) {
       type: 'vikunja',
       url: url || undefined,
       key: key || undefined,
+      version: version !== '1' ? parseInt(version, 10) : undefined,
       enableTaskList: enableTaskList || undefined,
     };
 
@@ -58,7 +66,7 @@ function VikunjaWidgetFields({ initialData, onChange: parentOnChange }) {
     }
 
     parentOnChange(dataForParent, errors);
-  }, [url, key, enableTaskList, parentOnChange]);
+  }, [url, key, version, enableTaskList, parentOnChange]);
 
   // Handle changes for standard TextFields
   const handleTextFieldChange = (setter) => (event) => {
@@ -100,6 +108,21 @@ function VikunjaWidgetFields({ initialData, onChange: parentOnChange }) {
         error={!!fieldErrors.key}
         helperText={fieldErrors.key || "Generate from Vikunja frontend settings. Can be a {{HOMEPAGE_VAR_...}}"}
       />
+      <FormControl fullWidth>
+        <InputLabel id="vikunja-version-label">Widget Version</InputLabel>
+        <Select
+          labelId="vikunja-version-label"
+          id="vikunja-version-select"
+          name="version"
+          value={version}
+          label="Widget Version"
+          onChange={handleTextFieldChange(setVersion)}
+        >
+          <MenuItem value="1">v1 (&lt; 1.0.0-rc4, Default)</MenuItem>
+          <MenuItem value="2">v2 (&gt;= 1.0.0-rc4)</MenuItem>
+        </Select>
+        <FormHelperText>Use v2 for Vikunja 1.0.0-rc4 and newer.</FormHelperText>
+      </FormControl>
       <FormControlLabel
         control={
           <Checkbox
@@ -119,6 +142,7 @@ VikunjaWidgetFields.propTypes = {
     type: PropTypes.string,
     url: PropTypes.string,
     key: PropTypes.string,
+    version: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
     enableTaskList: PropTypes.bool,
   }),
   onChange: PropTypes.func.isRequired,

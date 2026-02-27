@@ -206,6 +206,59 @@
     "hideErrors": {
         "type": "boolean",
         "description": "Hide widget API error messages globally"
+    },
+    "disableIndexing": {
+        "type": "boolean",
+        "description": "Disable search engine indexing"
+    },
+    "pwa": {
+        "type": "object",
+        "description": "Progressive Web App configuration",
+        "properties": {
+            "icons": {
+                "type": "array",
+                "description": "PWA icon definitions",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "src": { "type": "string" },
+                        "sizes": { "type": "string" },
+                        "type": { "type": "string" }
+                    },
+                    "additionalProperties": true
+                }
+            },
+            "shortcuts": {
+                "type": "array",
+                "description": "PWA shortcut definitions",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "name": { "type": "string" },
+                        "url": { "type": "string" },
+                        "icon": { "type": "string" }
+                    },
+                    "additionalProperties": true
+                }
+            }
+        },
+        "additionalProperties": true
+    },
+    "blockHighlights": {
+        "type": "object",
+        "description": "Custom CSS classes for block highlight levels",
+        "properties": {
+            "levels": {
+                "type": "object",
+                "properties": {
+                    "good": { "type": "string", "description": "CSS class for 'good' highlight level" },
+                    "warn": { "type": "string", "description": "CSS class for 'warn' highlight level" },
+                    "danger": { "type": "string", "description": "CSS class for 'danger' highlight level" }
+                },
+                "additionalProperties": false
+            }
+        },
+        "additionalProperties": false
     }
   },
   "additionalProperties": true,
