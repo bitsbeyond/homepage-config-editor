@@ -2387,6 +2387,181 @@ fastify.delete('/api/images/:filename', { preHandler: [verifyAuth] }, async (req
 
 // --- End Image Management Routes ---
 
+// --- API Help / Documentation Route (no auth required) ---
+/**
+ * GET /api/help
+ * Returns an HTML page documenting the Agent REST API endpoints.
+ * Publicly accessible — no authentication required.
+ */
+fastify.get('/api/help', async (request, reply) => {
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Homepage Config Editor — Agent API Reference</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: #0f1117;
+      color: #c9d1d9;
+      line-height: 1.6;
+      padding: 2rem 1rem;
+    }
+    .container { max-width: 900px; margin: 0 auto; }
+    h1 { color: #e6edf3; font-size: 2rem; margin-bottom: 0.25rem; }
+    .subtitle { color: #8b949e; margin-bottom: 2rem; font-size: 0.95rem; }
+    h2 { color: #58a6ff; font-size: 1.2rem; margin: 2rem 0 0.75rem; border-bottom: 1px solid #21262d; padding-bottom: 0.4rem; }
+    h3 { color: #e6edf3; font-size: 1rem; margin: 1.25rem 0 0.4rem; }
+    p { color: #8b949e; margin-bottom: 0.5rem; }
+    table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: 0.9rem; }
+    th { background: #161b22; color: #8b949e; text-align: left; padding: 0.5rem 0.75rem; font-weight: 600; border: 1px solid #21262d; }
+    td { padding: 0.5rem 0.75rem; border: 1px solid #21262d; vertical-align: top; }
+    td:first-child { white-space: nowrap; }
+    .method { display: inline-block; padding: 0.15rem 0.4rem; border-radius: 4px; font-size: 0.75rem; font-weight: 700; font-family: monospace; }
+    .get    { background: #0d419d; color: #79c0ff; }
+    .post   { background: #0a3d28; color: #56d364; }
+    .put    { background: #2d3700; color: #e3b341; }
+    .delete { background: #3d0e0e; color: #f85149; }
+    code, .code { font-family: 'Courier New', Courier, monospace; font-size: 0.85em; }
+    .endpoint { color: #e6edf3; }
+    .auth-box {
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-left: 4px solid #58a6ff;
+      border-radius: 6px;
+      padding: 1rem 1.25rem;
+      margin: 1.5rem 0;
+    }
+    .auth-box h3 { color: #58a6ff; margin-top: 0; }
+    pre {
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 6px;
+      padding: 1rem 1.25rem;
+      overflow-x: auto;
+      color: #c9d1d9;
+      font-size: 0.85rem;
+      margin: 0.75rem 0;
+    }
+    .note { background: #161b22; border: 1px solid #30363d; border-radius: 6px; padding: 0.75rem 1rem; color: #8b949e; font-size: 0.875rem; margin-top: 2rem; }
+    footer { margin-top: 3rem; text-align: center; color: #484f58; font-size: 0.8rem; }
+  </style>
+</head>
+<body>
+<div class="container">
+  <h1>📡 Agent API Reference</h1>
+  <p class="subtitle">Homepage Config Editor — Machine-readable REST API for agents and automation</p>
+
+  <div class="auth-box">
+    <h3>🔑 Authentication</h3>
+    <p>All Agent API endpoints require a Bearer token in the <code>Authorization</code> header.</p>
+    <pre>Authorization: Bearer &lt;your-api-token&gt;</pre>
+    <p>Tokens are managed by an admin under <strong>Admin → API Tokens</strong> in the editor UI.</p>
+  </div>
+
+  <h2>Services</h2>
+  <table>
+    <tr>
+      <th>Method</th>
+      <th>Endpoint</th>
+      <th>Description</th>
+    </tr>
+    <tr>
+      <td><span class="method get">GET</span></td>
+      <td class="endpoint code">/api/v1/services</td>
+      <td>List all service groups and their services</td>
+    </tr>
+    <tr>
+      <td><span class="method get">GET</span></td>
+      <td class="endpoint code">/api/v1/services/:groupName</td>
+      <td>Get all services in a specific group</td>
+    </tr>
+    <tr>
+      <td><span class="method post">POST</span></td>
+      <td class="endpoint code">/api/v1/services/:groupName</td>
+      <td>Add a new service to a group</td>
+    </tr>
+    <tr>
+      <td><span class="method put">PUT</span></td>
+      <td class="endpoint code">/api/v1/services/:groupName/:serviceName</td>
+      <td>Update an existing service</td>
+    </tr>
+    <tr>
+      <td><span class="method delete">DELETE</span></td>
+      <td class="endpoint code">/api/v1/services/:groupName/:serviceName</td>
+      <td>Delete a service from a group</td>
+    </tr>
+  </table>
+
+  <h2>Bookmarks</h2>
+  <table>
+    <tr>
+      <th>Method</th>
+      <th>Endpoint</th>
+      <th>Description</th>
+    </tr>
+    <tr>
+      <td><span class="method get">GET</span></td>
+      <td class="endpoint code">/api/v1/bookmarks</td>
+      <td>List all bookmark groups and their bookmarks</td>
+    </tr>
+    <tr>
+      <td><span class="method get">GET</span></td>
+      <td class="endpoint code">/api/v1/bookmarks/:groupName</td>
+      <td>Get all bookmarks in a specific group</td>
+    </tr>
+    <tr>
+      <td><span class="method post">POST</span></td>
+      <td class="endpoint code">/api/v1/bookmarks/:groupName</td>
+      <td>Add a new bookmark to a group</td>
+    </tr>
+    <tr>
+      <td><span class="method put">PUT</span></td>
+      <td class="endpoint code">/api/v1/bookmarks/:groupName/:bookmarkName</td>
+      <td>Update an existing bookmark</td>
+    </tr>
+    <tr>
+      <td><span class="method delete">DELETE</span></td>
+      <td class="endpoint code">/api/v1/bookmarks/:groupName/:bookmarkName</td>
+      <td>Delete a bookmark from a group</td>
+    </tr>
+  </table>
+
+  <h2>Example Requests</h2>
+
+  <h3>List all services</h3>
+  <pre>curl -s \\
+  -H "Authorization: Bearer &lt;token&gt;" \\
+  https://your-editor-host/api/v1/services</pre>
+
+  <h3>Add a service to a group</h3>
+  <pre>curl -s -X POST \\
+  -H "Authorization: Bearer &lt;token&gt;" \\
+  -H "Content-Type: application/json" \\
+  -d '{"service": {"name": "My App", "href": "https://myapp.example.com", "description": "My app"}}' \\
+  https://your-editor-host/api/v1/services/MyGroup</pre>
+
+  <h3>Update a bookmark</h3>
+  <pre>curl -s -X PUT \\
+  -H "Authorization: Bearer &lt;token&gt;" \\
+  -H "Content-Type: application/json" \\
+  -d '{"href": "https://updated-url.example.com", "description": "Updated description"}' \\
+  https://your-editor-host/api/v1/bookmarks/MyGroup/MyBookmark</pre>
+
+  <div class="note">
+    💡 <strong>Tip:</strong> URL-encode group and item names that contain spaces or special characters, e.g. <code>My%20Group</code>.
+  </div>
+
+  <footer>Homepage Config Editor · Agent API · <a href="/" style="color:#58a6ff">← Back to Editor</a></footer>
+</div>
+</body>
+</html>`;
+
+  reply.type('text/html').send(html);
+});
+
 // Catch-all route for SPA: serve index.html for any non-API, non-file GET requests
 // This should be registered after API routes and after fastifyStatic.
 fastify.get('/*', (request, reply) => {
@@ -2400,6 +2575,44 @@ fastify.get('/*', (request, reply) => {
     reply.code(404).send({ error: 'API endpoint not found.' });
   }
 });
+
+// --- Agent REST API ---
+const { apiTokenMiddleware, hashToken } = require('./apiTokenMiddleware');
+const { logApiCall } = require('./database');
+
+// Central audit logging hook for all /api/v1/ requests
+fastify.addHook('onResponse', async (req, reply) => {
+  if (req.url.startsWith('/api/v1/') && req.apiToken) {
+    try {
+      await logApiCall(req.apiToken.id, req.apiToken.name, req.ip, req.method, req.url, reply.statusCode, null);
+    } catch (err) {
+      fastify.log.error(err, 'Failed to write API audit log');
+    }
+  }
+});
+
+// Register v1 API routes (Bearer token auth via apiTokenMiddleware)
+fastify.register(async (instance) => {
+  instance.addHook('preHandler', apiTokenMiddleware);
+  instance.register(require('./routes/v1/services'));
+  instance.register(require('./routes/v1/bookmarks'));
+}, { prefix: '/api/v1' });
+
+// Register admin token management routes (JWT admin auth)
+fastify.register(async (instance) => {
+  // SPA routing fix: browser direct-navigations to /admin/* pages (e.g. /admin/api-tokens)
+  // must receive index.html so the React router can render the correct view.
+  // API calls made by the frontend always use fetch() with Accept: application/json,
+  // so checking the Accept header lets us distinguish the two cases safely.
+  instance.addHook('preHandler', async (request, reply) => {
+    const accept = request.headers['accept'] || '';
+    if (accept.includes('text/html')) {
+      return reply.sendFile('index.html', FRONTEND_PATH);
+    }
+  });
+  instance.addHook('preHandler', verifyAdmin);
+  instance.register(require('./routes/admin/apiTokens'));
+}, { prefix: '/admin' });
 
 /**
  * Run the server!

@@ -2,6 +2,36 @@
 
 This document outlines the key changes and features introduced in each version of the Homepage Editor.
 
+## Version 0.9.2
+
+Security patch resolving Docker Hub Scout CVEs across npm dependencies and build attestations.
+
+*   **Security: Resolve HIGH CVEs in tar (CVE-2026-31802, CVE-2026-29786):**
+    *   Updated backend `tar` override from `^7.5.8` to `^7.5.10` (resolves to 7.5.11)
+    *   Fixes two HIGH (8.2) severity vulnerabilities in the transitive `tar` dependency used by `sqlite3` via `node-gyp`
+*   **Security: Resolve MEDIUM CVE in Fastify (CVE-2026-3419):**
+    *   Updated `fastify` from `^5.7.4` to `^5.8.2`
+    *   Fixes malformed `Content-Type` header bypass that allowed RFC-invalid headers to reach content-type parsers
+*   **Security: Resolve HIGH CVE in flatted (frontend):**
+    *   Added `overrides` for `flatted` to `^3.4.0` (resolves to 3.4.1) in frontend `package.json`
+    *   Fixes unbounded recursion DoS vulnerability in `flatted.parse()` (transitive dep of `eslint`)
+*   **Security: Eliminate false-positive golang/stdlib CVEs:**
+    *   Added `--provenance=false --sbom=false` to `docker buildx build` commands in both `pushtoregistry-Dockerhub.sh` and `pushtoregistry-harbor.sh`
+    *   The 5 golang/stdlib CVEs (3 HIGH, 1 MEDIUM, 1 LOW) were from buildkit attestation metadata, not from the runtime image (no Go is installed in the container)
+*   **Remaining accepted risks:**
+    *   CVE-2025-45582 (4.1 MEDIUM) — `deb/debian/tar` in base image, no fix available in Debian bookworm repos
+    *   CVE-2026-3449 (1.9 LOW) — `@tootallnate/once` in `sqlite3`'s build-time `node-gyp` chain, not present in runtime image
+
+## Version 0.9.1
+
+Fixes the PUT `/api/v1/services/:group/:name` bug where `name` from the request body was incorrectly spread into the service's YAML attributes.
+
+*   **Bug Fix — PUT /api/v1/services (v1 API):**
+    *   **Root Cause:** `req.body` was spread directly into service attributes including the `name` field, adding a spurious `name:` key to the YAML entry (e.g. `{ href: "...", name: "MyService" }` instead of just `{ href: "..." }`). POST correctly stripped `name` via destructuring, but PUT did not.
+    *   **Fix:** Strip `name` from `req.body` before merging into existing service attributes, mirroring the POST handler pattern.
+    *   **Bonus:** If body contains `newName` (different from URL `:name`), the service key is renamed atomically. Duplicate name validation added.
+    *   **Safety:** Added null-guard inside `writeQueue` for group/service lookups (prevents crash if resource disappears between validation and write).
+
 ## Version 0.9.0
 
 Upgrades Homepage compatibility from v1.8.0 to v1.10.1. Adds 4 new widgets, version selectors for 6 widgets, field updates for 3 widgets, and new settings options.

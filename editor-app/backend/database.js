@@ -96,6 +96,46 @@ async function initDatabase() {
     // Optional: Add indexes for performance later if needed
     // await dbRun('CREATE INDEX IF NOT EXISTS idx_users_email ON users (email);');
 
+    // API tokens table for agent Bearer token auth
+    await dbRun(`
+      CREATE TABLE IF NOT EXISTS api_tokens (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        token_hash TEXT UNIQUE NOT NULL,
+        created_by TEXT NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        last_used_at DATETIME
+      )
+    `);
+    console.log("Checked/Ensured 'api_tokens' table exists.");
+
+    // API audit log table
+    await dbRun(`
+      CREATE TABLE IF NOT EXISTS api_logs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+        token_id INTEGER REFERENCES api_tokens(id) ON DELETE SET NULL,
+        token_name TEXT,
+        client_ip TEXT,
+        method TEXT,
+        path TEXT,
+        status_code INTEGER,
+        details TEXT
+      )
+    `);
+    console.log("Checked/Ensured 'api_logs' table exists.");
+
+    // Auto-rotate api_logs: keep max 10000 entries
+    await dbRun(`
+      CREATE TRIGGER IF NOT EXISTS api_logs_rotate
+      AFTER INSERT ON api_logs
+      WHEN (SELECT COUNT(*) FROM api_logs) > 10000
+      BEGIN
+        DELETE FROM api_logs WHERE id = (SELECT MIN(id) FROM api_logs);
+      END
+    `);
+    console.log("Checked/Ensured 'api_logs_rotate' trigger exists.");
+
   } catch (error) {
     console.error('Failed to initialize database:', error);
     // Exit the process if database initialization fails critically
@@ -139,6 +179,20 @@ const dbGet = (sql, params = []) => {
         reject(err);
       } else {
         resolve(row); // Resolve with the row object or undefined
+      }
+    });
+  });
+};
+
+const dbAll = (sql, params = []) => {
+  return new Promise((resolve, reject) => {
+    const db = getDb();
+    db.all(sql, params, (err, rows) => {
+      if (err) {
+        console.error('Database all error:', sql, params, err.message);
+        reject(err);
+      } else {
+        resolve(rows);
       }
     });
   });
@@ -528,9 +582,57 @@ async function getLockoutStatus(email) {
   };
 }
 
+// --- API Token helpers ---
+
+async function createApiToken(name, tokenHash, createdBy) {
+  const result = await dbRun(
+    'INSERT INTO api_tokens (name, token_hash, created_by) VALUES (?, ?, ?)',
+    [name, tokenHash, createdBy]
+  );
+  return result.lastID;
+}
+
+async function findApiTokenByHash(hash) {
+  return dbGet('SELECT * FROM api_tokens WHERE token_hash = ?', [hash]);
+}
+
+async function listApiTokens() {
+  return dbAll('SELECT id, name, created_by, created_at, last_used_at FROM api_tokens ORDER BY created_at DESC');
+}
+
+async function deleteApiToken(id) {
+  return dbRun('DELETE FROM api_tokens WHERE id = ?', [id]);
+}
+
+async function getApiTokenById(id) {
+  return dbGet('SELECT id, name, created_by, created_at, last_used_at FROM api_tokens WHERE id = ?', [id]);
+}
+
+function updateApiTokenLastUsed(id) {
+  const db = getDb();
+  db.run('UPDATE api_tokens SET last_used_at = CURRENT_TIMESTAMP WHERE id = ?', [id], (err) => {
+    if (err) console.error('Failed to update last_used_at:', err.message);
+  });
+}
+
+async function logApiCall(tokenId, tokenName, clientIp, method, path, statusCode, details) {
+  return dbRun(
+    'INSERT INTO api_logs (token_id, token_name, client_ip, method, path, status_code, details) VALUES (?, ?, ?, ?, ?, ?, ?)',
+    [tokenId, tokenName, clientIp, method, path, statusCode, details || null]
+  );
+}
+
 module.exports = {
   initDatabase,
   getDb,
+  // API token functions
+  createApiToken,
+  findApiTokenByHash,
+  listApiTokens,
+  deleteApiToken,
+  getApiTokenById,
+  updateApiTokenLastUsed,
+  logApiCall,
   countUsers,
   createInitialAdmin,
   findUserByEmail,

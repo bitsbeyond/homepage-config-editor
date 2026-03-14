@@ -25,10 +25,12 @@ import {
   createTheme,
   IconButton,
   CircularProgress, // Import CircularProgress for loading
-  GlobalStyles // Import GlobalStyles
+  GlobalStyles, // Import GlobalStyles
+  Divider,
 } from '@mui/material';
 import Brightness4Icon from '@mui/icons-material/Brightness4';
 import Brightness7Icon from '@mui/icons-material/Brightness7';
+import MenuIcon from '@mui/icons-material/Menu';
 import SettingsIcon from '@mui/icons-material/Settings';
 import ViewListIcon from '@mui/icons-material/ViewList';
 import ConstructionIcon from '@mui/icons-material/Construction';
@@ -63,6 +65,7 @@ import EnvVarsPage from './components/EnvVars/EnvVarsPage'; // Import the new En
 import HelpPage from './components/HelpPage/HelpPage'; // Import the Help page component
 import ImageManagementPage from './components/ImageManagement/ImageManagementPage'; // Import the Image Management page
 import ProfileSettingsPage from './components/ProfileSettings/ProfileSettingsPage'; // Import Profile Settings page
+import ApiTokensPage from './components/ApiTokens/ApiTokensPage'; // API Token management (admin)
 // Removed InfoWidgetOrderPage import
 const UserManagementPage = () => <PlaceholderComponent title="User Management" />; // Placeholder for Admin
 
@@ -232,6 +235,11 @@ function AppContent() {
     // TODO: Add User Management link conditionally for Admins
   ], []);
 
+  // Admin-only nav items
+  const adminNavItems = useMemo(() => currentUser?.role === 'Admin' ? [
+    { text: 'API Tokens', icon: <VpnKeyIcon />, path: '/admin/api-tokens' },
+  ] : [], [currentUser]);
+
   const editorVersion = import.meta.env.VITE_APP_VERSION || "0.0.0";
   const supportedHomepageVersion = import.meta.env.VITE_HOMEPAGE_COMPATIBLE_VERSION || "N/A";
 
@@ -261,6 +269,25 @@ function AppContent() {
           </ListItem>
         ))}
       </List>
+      {adminNavItems.length > 0 && (
+        <>
+          <Divider />
+          <List dense>
+            {adminNavItems.map((item) => (
+              <ListItem key={item.text} disablePadding>
+                <ListItemButton
+                  component={RouterLink}
+                  to={item.path}
+                  selected={location.pathname === item.path}
+                >
+                  <ListItemIcon>{item.icon}</ListItemIcon>
+                  <ListItemText primary={item.text} />
+                </ListItemButton>
+              </ListItem>
+            ))}
+          </List>
+        </>
+      )}
       <Box sx={{ p: 2, mt: 'auto', borderTop: 1, borderColor: 'divider' }}> {/* Version info at the bottom */}
         <Typography variant="caption" display="block" gutterBottom>
           Editor Version: {editorVersion}
@@ -325,7 +352,15 @@ function AppContent() {
         }}
       >
         <Toolbar>
-          {/* TODO: Add Menu Icon for mobile drawer toggle */}
+          <IconButton
+            color="inherit"
+            aria-label="open drawer"
+            edge="start"
+            onClick={handleDrawerToggle}
+            sx={{ mr: 2, display: { sm: 'none' } }}
+          >
+            <MenuIcon />
+          </IconButton>
           <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
             Homepage Editor
           </Typography>
@@ -407,7 +442,10 @@ function AppContent() {
           {/* <Route path="/info-widget-order" element={<InfoWidgetOrderPage />} /> */}{/* Removed route for Info Widget Order Page */}
           <Route path="/help" element={<HelpPage />} /> {/* Added route for Help Page */}
           <Route path="/profile-settings" element={<ProfileSettingsPage />} /> {/* Added route for Profile Settings Page */}
-          {/* TODO: Add admin-only route for User Management */}
+          {/* Admin-only routes */}
+          {currentUser?.role === 'Admin' && (
+            <Route path="/admin/api-tokens" element={<ApiTokensPage />} />
+          )}
           {/* <Route path="/users" element={<AdminRoute><UserManagementPage /></AdminRoute>} /> */}
           <Route path="*" element={<Navigate to="/services" replace />} /> {/* Fallback */}
           </Routes>
